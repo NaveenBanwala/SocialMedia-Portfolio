@@ -10,8 +10,12 @@ import org.springframework.stereotype.Service;
 
 import com.social_portfolio_db.demo.naveen.Payloads.JwtAuthRequest;
 import com.social_portfolio_db.demo.naveen.Entity.Users;
+import com.social_portfolio_db.demo.naveen.Enum.RoleName;
+import com.social_portfolio_db.demo.naveen.Jpa.RoleRepository;
 import com.social_portfolio_db.demo.naveen.Jpa.UserJpa;
 import com.social_portfolio_db.demo.naveen.Security.JwtService;
+import com.social_portfolio_db.demo.naveen.Payloads.SignupRequest;
+import com.social_portfolio_db.demo.naveen.Entity.Role;
 
 @Service
 public class AuthService {
@@ -27,6 +31,9 @@ public class AuthService {
 
     @Autowired
     private UserDetailsService userDetailsService;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     // 🟢 Register method
     public String register(JwtAuthRequest request) {
@@ -52,6 +59,25 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         return jwtService.generateToken(userDetails);
     }
+
+
+    public Users registerUser(SignupRequest dto) {
+    Users user = new Users();
+    user.setUsername(dto.getUsername());
+    user.setEmail(dto.getEmail());
+    user.setPassword(passwordEncoder.encode(dto.getPassword()));
+
+    Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
+                    .orElseThrow(() -> new RuntimeException("Role not found"));
+
+    user.getRoles().add(userRole);
+
+    return userRepo.save(user);
+}
+
+
+
+    
 }
 
 

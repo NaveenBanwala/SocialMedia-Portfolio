@@ -64,4 +64,12 @@ public class Projects {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProjectsLike> likes = new ArrayList<>();
 
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProjectImage> images = new ArrayList<>();
+
+    public Projects(String imageUrl){
+    this.imageUrl = imageUrl;
+    }
+
+
 }

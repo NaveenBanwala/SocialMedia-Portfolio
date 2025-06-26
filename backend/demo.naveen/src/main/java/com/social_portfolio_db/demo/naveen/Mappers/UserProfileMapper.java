@@ -11,7 +11,7 @@ public class UserProfileMapper {
     public static UserProfileDTO toDto(Users user) {
         UserProfileDTO dto = new UserProfileDTO();
         dto.setId(user.getId());
-        dto.setName(user.getUsername());
+        dto.setUsername(user.getUsername());
         dto.setBio(user.getBio());
         dto.setLocation(user.getLocation());
         dto.setProfilePicUrl(user.getProfilePicUrl());
@@ -37,5 +37,7 @@ public class UserProfileMapper {
 
         return dto;
     }
+
 }
+
 

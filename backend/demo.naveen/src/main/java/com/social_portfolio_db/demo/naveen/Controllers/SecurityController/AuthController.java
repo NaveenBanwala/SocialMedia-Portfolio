@@ -83,10 +83,5 @@ public class AuthController {
             return ResponseEntity.status(500).body("Registration failed: " + e.getMessage());
         }
     }
-
-    @PostMapping("/test")
-    public ResponseEntity<String> test(@RequestBody JwtAuthRequest request) {
-        return ResponseEntity.ok("Received: " + request.getEmail());
-    }
 }
 

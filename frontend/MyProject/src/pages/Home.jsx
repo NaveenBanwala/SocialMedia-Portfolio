@@ -1,9 +1,9 @@
+import { Navigate } from 'react-router-dom';
+
 function Home() {
-  return (
-    <div>
-      <h1>Welcome to My Project</h1>
-      <p>This is the home page of your project.</p>
-    </div>
-  );
+  const token = localStorage.getItem('token');
+  if (!token) return <Navigate to="/login" />;
+  return <Navigate to="/dashboard" />;
 }
+
 export default Home;

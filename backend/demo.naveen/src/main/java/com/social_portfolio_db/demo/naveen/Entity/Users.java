@@ -29,7 +29,7 @@ import java.util.*;
 public class Users {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     @Column(name = "name", nullable = false, length = 50, unique = true)
@@ -104,5 +104,10 @@ private List<ProfileLike> likedProfiles = new ArrayList<>();
 @OneToMany(mappedBy = "likedUser", cascade = CascadeType.ALL, orphanRemoval = true)
 @Builder.Default
 private List<ProfileLike> receivedLikes = new ArrayList<>();
+
+
+@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+private List<Post> posts = new ArrayList<>();
+
 
 }

@@ -12,9 +12,11 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
+import com.social_portfolio_db.demo.naveen.Jpa.PostRepository;
 import com.social_portfolio_db.demo.naveen.Jpa.ProjectsRepository;
 import com.social_portfolio_db.demo.naveen.Jpa.UserJpa;
 import com.social_portfolio_db.demo.naveen.Entity.Users;
+import com.social_portfolio_db.demo.naveen.Entity.Post;
 import com.social_portfolio_db.demo.naveen.Entity.Projects;
 
 @RestController
@@ -25,6 +27,8 @@ public class AdminController {
 
     private final UserJpa userRepo;
     private final ProjectsRepository projectRepo;
+
+    private final PostRepository postRepo;
 
     @GetMapping("/users")
     public ResponseEntity<List<Users>> getAllUsers() {
@@ -47,4 +51,11 @@ public class AdminController {
         projectRepo.deleteById(id);
         return ResponseEntity.noContent().build();
     }
+    @DeleteMapping("posts/{postId}")
+    public ResponseEntity<?> deleteAnyPost(@PathVariable Long postId) {
+        Post post = postRepo.findById(postId).orElseThrow();
+        postRepo.delete(post);
+        return ResponseEntity.ok("Post deleted by admin");
+    }
+    
 }

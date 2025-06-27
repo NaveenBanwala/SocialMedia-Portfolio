@@ -1,12 +1,17 @@
 package com.social_portfolio_db.demo.naveen.Controllers.SecurityController;
 
+import com.social_portfolio_db.demo.naveen.Entity.Role;
 import com.social_portfolio_db.demo.naveen.Entity.Users;
+import com.social_portfolio_db.demo.naveen.Enum.RoleName;
 import com.social_portfolio_db.demo.naveen.Jpa.UserJpa;
+import com.social_portfolio_db.demo.naveen.Jpa.RoleRepository;
 import com.social_portfolio_db.demo.naveen.Payloads.JwtAuthRequest;
 import com.social_portfolio_db.demo.naveen.Payloads.JwtAuthResponse;
 import com.social_portfolio_db.demo.naveen.Security.JwtService;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.Set;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,12 +26,12 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
-
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
     private final UserJpa userRepo;
     private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepo;
 
     @PostMapping("/login")
     public ResponseEntity<JwtAuthResponse> login(@RequestBody JwtAuthRequest request) {
@@ -53,35 +58,29 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody JwtAuthRequest request) {
-        // 1. Check if user exists
         if (userRepo.findByEmail(request.getEmail()).isPresent()) {
-            System.out.println("Registration failed: Email already exists: " + request.getEmail());
             return ResponseEntity.badRequest().body("Email already exists");
         }
 
-        // 2. Create and save user
+        Role defaultRole = roleRepo.findByName(RoleName.ROLE_USER)
+                .orElseThrow(() -> new RuntimeException("Default role not found"));
+
         Users user = new Users();
-        user.setUsername(request.getUsername());
+        user.setUsername(request.getUsername() != null ? request.getUsername() : request.getEmail());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRoles(Set.of(defaultRole));
+
         userRepo.save(user);
 
-        try {
-            // 3. Generate token
-            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-            String token = jwtService.generateToken(userDetails);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String token = jwtService.generateToken(userDetails);
 
-            // 4. Return token + username
-            JwtAuthResponse response = new JwtAuthResponse();
-            response.setToken(token);
-            response.setUsername(userDetails.getUsername());
+        JwtAuthResponse response = new JwtAuthResponse();
+        response.setToken(token);
+        response.setUsername(userDetails.getUsername());
 
-            System.out.println("Registration successful for: " + request.getEmail());
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Registration failed: " + e.getMessage());
-        }
+        return ResponseEntity.ok(response);
     }
 }
 

@@ -14,9 +14,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.social_portfolio_db.demo.naveen.Dtos.UserProfileDTO;
 import com.social_portfolio_db.demo.naveen.ServicesImp.UserServiceImp;
+import com.social_portfolio_db.demo.naveen.Jpa.UserJpa;
+import com.social_portfolio_db.demo.naveen.Entity.Users;
 
 @RestController
 @RequestMapping("/api")
@@ -24,7 +28,8 @@ public class UserController {
 
     @Autowired
     private UserServiceImp userServiceImp;
-
+    @Autowired
+    private UserJpa userRepo;
 
     @GetMapping("/users/{id}")
         public ResponseEntity<UserProfileDTO> getProfile(@PathVariable Long id) {
@@ -62,6 +67,13 @@ public class UserController {
                                             @RequestParam("file") MultipartFile file) {
         userServiceImp.uploadProfileImage(id, file);
         return ResponseEntity.ok("Image uploaded");
+    }
+
+    @GetMapping("/users/me")
+    public ResponseEntity<UserProfileDTO> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        Users user = userRepo.findByEmail(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("User not found"));
+        UserProfileDTO dto = userServiceImp.getUserProfile(user.getId());
+        return ResponseEntity.ok(dto);
     }
 
 }

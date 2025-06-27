@@ -1,54 +1,58 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../Api/api'; 
 
 const Register = () => {
-    const [formData, setFormData] = useState({
-    name: '',
+  const [formData, setFormData] = useState({
+    username: '', 
     email: '',
     password: '',
-    });
-    const navigate = useNavigate();
+  });
 
-    const handleChange = (e) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    setFormData({ username: '', email: '', password: '' });
+  }, [location]);
+
+  const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+  };
 
-const handleRegister = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     try {
-    await axios.post('/api/auth/register', formData);
-
-    // ✅ Save token (if backend returns it) or just redirect
-    const loginRes = await axios.post('/api/auth/login', {
-        email: formData.email,
-        password: formData.password,
-    });
-    localStorage.setItem('token', loginRes.data.token);
-
-    // ✅ Redirect to edit profile page
-    navigate('/edit-profile');
+      // Register the user
+      await api.post('/auth/register', formData);
+      // Redirect to login page after successful registration
+      navigate('/login');
     } catch (err) {
-    alert('Registration failed');
+      // Better error message
+      if (err.response?.data === 'Email already exists') {
+        alert('This email is already registered.');
+      } else {
+        alert('Registration failed. Please try again.');
+        console.error(err);
+      }
     }
-};
+  };
 
-
-    return (
+  return (
     <div className="flex justify-center items-center min-h-screen bg-[#32a86d]">
-        <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center text-[#32a86d]">Register</h2>
         <form onSubmit={handleRegister} className="space-y-4">
-            <input
+          <input
             type="text"
-            name="name"
-            placeholder="Full Name"
+            name="username"
+            placeholder="Username"
             className="w-full px-4 py-2 border rounded focus:outline-none"
-            value={formData.name}
+            value={formData.username}
             onChange={handleChange}
             required
-            />
-            <input
+          />
+          <input
             type="email"
             name="email"
             placeholder="Email"
@@ -56,8 +60,8 @@ const handleRegister = async (e) => {
             value={formData.email}
             onChange={handleChange}
             required
-            />
-            <input
+          />
+          <input
             type="password"
             name="password"
             placeholder="Password"
@@ -65,17 +69,18 @@ const handleRegister = async (e) => {
             value={formData.password}
             onChange={handleChange}
             required
-            />
-            <button
+          />
+          <button
             type="submit"
             className="w-full bg-[#32a86d] text-white py-2 rounded font-semibold hover:bg-[#2c915d] transition"
-            >
+          >
             Register
-            </button>
+          </button>
         </form>
-        </div>
+      </div>
     </div>
-    );
+  );
 };
 
 export default Register;
+

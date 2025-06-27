@@ -5,7 +5,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+// import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,16 +13,22 @@ import org.springframework.web.multipart.MultipartFile;
 import com.social_portfolio_db.demo.naveen.Dtos.UserProfileDTO;
 import com.social_portfolio_db.demo.naveen.Entity.Skills;
 import com.social_portfolio_db.demo.naveen.Entity.Users;
+import com.social_portfolio_db.demo.naveen.Entity.Projects;
 import com.social_portfolio_db.demo.naveen.Jpa.SkillRepository;
 import com.social_portfolio_db.demo.naveen.Jpa.UserJpa;
+import com.social_portfolio_db.demo.naveen.Jpa.ProjectsRepository;
 import com.social_portfolio_db.demo.naveen.Mappers.UserProfileMapper;
 import com.social_portfolio_db.demo.naveen.Services.UserService;
+import com.social_portfolio_db.demo.naveen.Dtos.ProjectDTO;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class UserServiceImp implements UserService {
 
     private final UserJpa userRepo;
     private final SkillRepository skillRepo;
+    @Autowired
+    private ProjectsRepository projectsRepo;
 
     public UserServiceImp(UserJpa userRepo, SkillRepository skillRepo) {
         this.userRepo = userRepo;
@@ -59,13 +65,37 @@ public class UserServiceImp implements UserService {
         Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setBio(dto.getBio());
+        user.setLocation(dto.getLocation());
+        user.setProfilePicUrl(dto.getProfilePicUrl());
+        user.setResumeUrl(dto.getResumeUrl());
 
-        Set<Skills> newSkills = dto.getSkills().stream()
-            .map(name -> skillRepo.findBySkillName(name)
-                .orElseGet(() -> skillRepo.save(Skills.builder().skillName(name).build()))
-            ).collect(Collectors.toSet());
-
+        Set<Skills> newSkills = new java.util.HashSet<>();
+        if (dto.getSkills() != null) {
+            for (String name : dto.getSkills()) {
+                Skills skill = skillRepo.findBySkillName(name)
+                    .orElseGet(() -> {
+                        Skills s = Skills.builder().skillName(name).user(user).build();
+                        return skillRepo.save(s);
+                    });
+                newSkills.add(skill);
+            }
+        }
         user.setSkills(newSkills);
+
+        // Handle projects
+        if (dto.getProjects() != null) {
+            for (ProjectDTO projectDTO : dto.getProjects()) {
+                if (projectDTO.getTitle() != null && !projectDTO.getTitle().isEmpty()) {
+                    Projects project = new Projects();
+                    project.setTitle(projectDTO.getTitle());
+                    project.setDescription(projectDTO.getDescription());
+                    project.setImageUrl(projectDTO.getImageUrl());
+                    project.setUser(user); // Associate project with user
+                    projectsRepo.save(project);
+                }
+            }
+        }
+
         userRepo.save(user);
     }
 

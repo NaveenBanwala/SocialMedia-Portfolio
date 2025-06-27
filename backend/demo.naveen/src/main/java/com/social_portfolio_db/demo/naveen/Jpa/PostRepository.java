@@ -1,0 +1,12 @@
+package com.social_portfolio_db.demo.naveen.Jpa;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.social_portfolio_db.demo.naveen.Entity.Post;
+
+public interface PostRepository extends JpaRepository<Post, Long> {
+    List<Post> findByUserId(Long userId);
+}
+

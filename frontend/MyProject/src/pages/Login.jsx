@@ -1,24 +1,39 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useState, useEffect } from 'react';
+import { useNavigate, Navigate, useLocation } from 'react-router-dom';
+import api from '../Api/api';
+import { useAuth } from '../Api/AuthContext.jsx';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
+    const { isAuthenticated, login } = useAuth();
+
+    // Redirect if already authenticated
+    if (isAuthenticated) {
+        return <Navigate to="/dashboard" />;
+    }
+
+    useEffect(() => {
+        setEmail('');
+        setPassword('');
+    }, [location]);
 
     const handleLogin = async (e) => {
     e.preventDefault();
     try {
-        const res = await axios.post('/api/auth/login', { email, password });
-        localStorage.setItem('token', res.data.token);
-        navigate('/profile/me');
+        const res = await api.post('/auth/login', { email, password });
+        login(res.data.token); // Use context login
+        setEmail(''); // Clear input
+        setPassword(''); // Clear input
+        navigate('/dashboard');
     } catch (err) {
+        console.error('Login error:', err.response?.data || err.message); 
         alert('Invalid credentials');
     }
     };
     
-
 
     return (
     <div className="flex justify-center items-center min-h-screen bg-[#32a86d]">

@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAuthenticated = !!token;
-  // Check if user has admin role (assuming roles is an array of strings or objects)
+  // Check if user has admin role (roles is now a list of strings)
   const isAdmin = user && (user.roles?.includes('ROLE_ADMIN') || user.roles?.some?.(r => r.name === 'ROLE_ADMIN'));
 
   return (

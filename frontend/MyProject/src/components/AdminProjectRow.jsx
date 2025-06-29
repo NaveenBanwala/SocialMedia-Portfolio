@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 const AdminProjectRow = ({ project, onDelete }) => (
     <tr>
@@ -9,5 +9,6 @@ const AdminProjectRow = ({ project, onDelete }) => (
     </td>
     </tr>
 );
+
 
 export default AdminProjectRow;

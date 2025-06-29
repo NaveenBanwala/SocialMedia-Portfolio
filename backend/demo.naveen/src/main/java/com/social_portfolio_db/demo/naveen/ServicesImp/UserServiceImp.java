@@ -5,6 +5,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.nio.file.Path;
 // import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -82,16 +84,21 @@ public class UserServiceImp implements UserService {
         }
         user.setSkills(newSkills);
 
-        // Handle projects
+        // Handle projects without duplication
         if (dto.getProjects() != null) {
+            List<Projects> existingProjects = projectsRepo.findByUserId(user.getId());
             for (ProjectDTO projectDTO : dto.getProjects()) {
                 if (projectDTO.getTitle() != null && !projectDTO.getTitle().isEmpty()) {
-                    Projects project = new Projects();
-                    project.setTitle(projectDTO.getTitle());
-                    project.setDescription(projectDTO.getDescription());
-                    project.setImageUrl(projectDTO.getImageUrl());
-                    project.setUser(user); // Associate project with user
-                    projectsRepo.save(project);
+                    boolean alreadyExists = existingProjects.stream()
+                        .anyMatch(p -> p.getTitle().equalsIgnoreCase(projectDTO.getTitle()));
+                    if (!alreadyExists) {
+                        Projects project = new Projects();
+                        project.setTitle(projectDTO.getTitle());
+                        project.setDescription(projectDTO.getDescription());
+                        project.setImageUrl(projectDTO.getImageUrl());
+                        project.setUser(user); // Associate project with user
+                        projectsRepo.save(project);
+                    }
                 }
             }
         }
@@ -101,11 +108,19 @@ public class UserServiceImp implements UserService {
 
     public void uploadProfileImage(Long id, MultipartFile file) {
         try {
-            String path = "/images/" + file.getOriginalFilename(); // relative URL
-            Files.copy(file.getInputStream(), Paths.get("uploads/" + file.getOriginalFilename()), StandardCopyOption.REPLACE_EXISTING);
-
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            Path uploadPath = Paths.get("uploads/profiles/");
+            Path filePath = uploadPath.resolve(fileName);
+            
+            // Create directories if they don't exist
+            Files.createDirectories(uploadPath);
+            
+            // Save the file
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            
+            // Update user profile with the image URL
             Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-            user.setProfilePicUrl(path);
+            user.setProfilePicUrl("/images/profiles/" + fileName);
             userRepo.save(user);
         } catch (Exception e) {
             throw new RuntimeException("Error uploading image", e);

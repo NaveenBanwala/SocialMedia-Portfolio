@@ -8,6 +8,29 @@ const SearchUserPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Helper function to construct full image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http')) return imagePath;
+    // Use the new image serving endpoint
+    if (imagePath.startsWith('/images/')) {
+      return `http://localhost:8080/api/files${imagePath.substring(7)}`;
+    }
+    return `http://localhost:8080${imagePath}`;
+  };
+
+  // Check if profile picture URL is valid
+  const hasValidProfilePic = (profilePicUrl) => {
+    return profilePicUrl && profilePicUrl.trim() !== '';
+  };
+
+  // Default profile image component
+  const DefaultProfileImage = ({ username, size = "w-16 h-16" }) => (
+    <div className={`${size} rounded-full bg-[#32a86d] flex items-center justify-center text-white text-xl font-bold border-2 border-[#32a86d]`}>
+      {username ? username.charAt(0).toUpperCase() : 'U'}
+    </div>
+  );
+
   // Handle search form submit
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -50,13 +73,24 @@ const SearchUserPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {results.map(user => (
           <div key={user.id} className="border-2 border-[#32a86d] rounded-xl p-4 bg-white flex items-center gap-4">
-            <img
-              src={user.profilePicUrl || '/default-profile.png'}
-              alt="Profile"
-              className="w-16 h-16 rounded-full object-cover border-2 border-[#32a86d]"
-            />
+            <div className="relative">
+              {hasValidProfilePic(user.profilePicUrl) ? (
+                <img
+                  src={getImageUrl(user.profilePicUrl)}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-[#32a86d]"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              {!hasValidProfilePic(user.profilePicUrl) && (
+                <DefaultProfileImage username={user.username || user.name} />
+              )}
+            </div>
             <div>
-              <div className="font-semibold text-[#32a86d]">{user.name}</div>
+              <div className="font-semibold text-[#32a86d]">{user.name || user.username}</div>
               <div className="text-sm text-gray-600">{user.email}</div>
               <button
                 onClick={() => window.location.href = `/profile/${user.id}`}

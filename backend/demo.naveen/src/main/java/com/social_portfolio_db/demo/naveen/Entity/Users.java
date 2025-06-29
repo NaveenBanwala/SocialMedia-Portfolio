@@ -14,6 +14,7 @@ package com.social_portfolio_db.demo.naveen.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -107,7 +108,20 @@ private List<ProfileLike> receivedLikes = new ArrayList<>();
 
 
 @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+@Builder.Default
+@JsonIgnoreProperties("user")
 private List<Post> posts = new ArrayList<>();
 
+// Posts that this user has liked
+/*
+@ManyToMany
+@JoinTable(
+    name = "post_likes",
+    joinColumns = @JoinColumn(name = "user_id"),
+    inverseJoinColumns = @JoinColumn(name = "post_id")
+)
+@Builder.Default
+private Set<Post> likedPosts = new HashSet<>();
+*/
 
 }

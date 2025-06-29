@@ -11,6 +11,7 @@ import com.social_portfolio_db.demo.naveen.Security.JwtService;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<JwtAuthResponse> login(@RequestBody JwtAuthRequest request) {
         try {
+            // Check if user exists first
+            if (!userRepo.findByEmail(request.getEmail()).isPresent()) {
+                return ResponseEntity.status(401).body(null);
+            }
+
             // 1. Authenticate user
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
@@ -52,7 +58,15 @@ public class AuthController {
 
             return ResponseEntity.ok(response);
         } catch (AuthenticationException e) {
-            throw new RuntimeException("Invalid email or password");
+            // Log the actual exception for debugging
+            System.err.println("Authentication failed for email: " + request.getEmail());
+            System.err.println("Exception: " + e.getMessage());
+            return ResponseEntity.status(401).body(null);
+        } catch (Exception e) {
+            // Log any other exceptions
+            System.err.println("Unexpected error during login: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
         }
     }
 
@@ -81,6 +95,42 @@ public class AuthController {
         response.setUsername(userDetails.getUsername());
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            var users = userRepo.findAll();
+            return ResponseEntity.ok(users.stream()
+                .map(user -> Map.of(
+                    "id", user.getId(),
+                    "email", user.getEmail(),
+                    "username", user.getUsername(),
+                    "hasPassword", user.getPassword() != null && !user.getPassword().isEmpty()
+                ))
+                .collect(java.util.stream.Collectors.toList()));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error fetching users: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/check-user/{email}")
+    public ResponseEntity<?> checkUserExists(@PathVariable String email) {
+        try {
+            var user = userRepo.findByEmail(email);
+            if (user.isPresent()) {
+                return ResponseEntity.ok(Map.of(
+                    "exists", true,
+                    "email", user.get().getEmail(),
+                    "username", user.get().getUsername(),
+                    "hasPassword", user.get().getPassword() != null && !user.get().getPassword().isEmpty()
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of("exists", false));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error checking user: " + e.getMessage());
+        }
     }
 }
 

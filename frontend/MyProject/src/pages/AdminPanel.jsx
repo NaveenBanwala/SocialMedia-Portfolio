@@ -51,31 +51,72 @@ const AdminPanel = () => {
     }
   };
 
+  // Handle remove user profile picture
+  const handleRemoveUserProfilePic = async (userId) => {
+    if (!window.confirm('Are you sure you want to remove this user\'s profile picture?')) return;
+    try {
+      await api.delete(`/admin/users/${userId}/profile-picture`);
+      // Refresh the users list to show updated profile picture
+      const userRes = await api.get('/admin/users');
+      setUsers(userRes.data);
+      alert('Profile picture removed successfully.');
+    } catch (err) {
+      alert('Error removing profile picture: ' + (err.response?.data || err.message));
+    }
+  };
+
+  // Handle delete all projects
+  const handleDeleteAllProjects = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL projects? This action cannot be undone!')) return;
+    try {
+      const response = await api.delete('/projects/admin/delete-all');
+      alert(response.data);
+      setProjects([]);
+    } catch (err) {
+      alert('Error deleting all projects: ' + (err.response?.data || err.message));
+    }
+  };
+
   if (loading) return <div className="p-6">Loading admin data...</div>;
 
   return (
     <div className="p-6 min-h-screen bg-white">
       <h1 className="text-2xl font-bold text-[#32a86d] border-b-2 border-[#32a86d] pb-2 mb-6">Admin Panel</h1>
       {error && <div className="text-red-500 mb-4">{error}</div>}
+      
+      {/* Admin Actions */}
+      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded">
+        <h3 className="text-lg font-semibold text-red-800 mb-2">Danger Zone</h3>
+        <button
+          onClick={handleDeleteAllProjects}
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          Delete All Projects ({projects.length} projects)
+        </button>
+        <p className="text-sm text-red-600 mt-1">This will permanently delete all projects from all users.</p>
+      </div>
+
       {/* Users Table */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold text-[#32a86d] mb-2">Users</h2>
+        <h2 className="text-xl font-semibold text-[#32a86d] mb-2">Users ({users.length} total)</h2>
         <table className="w-full border-2 border-[#32a86d] rounded-xl bg-white">
           <thead>
             <tr className="bg-[#32a86d] text-white">
-              <th className="p-2">Username</th>
-              <th className="p-2">Email</th>
-              <th className="p-2">Actions</th>
+              <th className="p-2 text-left">User</th>
+              <th className="p-2 text-left">Email</th>
+              <th className="p-2 text-left">Role</th>
+              <th className="p-2 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map(user => (
-              <AdminUserRow key={user.id} user={user} onDelete={handleDeleteUser} />
+              <AdminUserRow key={user.id} user={user} onDelete={handleDeleteUser} onRemoveProfilePic={handleRemoveUserProfilePic} />
             ))}
           </tbody>
         </table>
         {users.length === 0 && <div className="text-gray-500 mt-2">No users found.</div>}
       </div>
+      
       {/* Projects Table */}
       <div>
         <h2 className="text-xl font-semibold text-[#32a86d] mb-2">Projects</h2>

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.Authentication;
 
@@ -25,6 +26,7 @@ import com.social_portfolio_db.demo.naveen.Jpa.ProjectsRepository;
 
 
 @RestController
+@RequestMapping("/api/projects")
 @RequiredArgsConstructor
 public class ProjectsController {
 
@@ -57,22 +59,42 @@ public class ProjectsController {
         return ResponseEntity.ok(projectsService.getProjectById(projectId));
     }
 
+    @DeleteMapping("/{projectId}")
+    public ResponseEntity<?> deleteProject(
+        @PathVariable Long projectId,
+        Authentication authentication
+    ) {
+        try {
+            Projects project = projectsRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
 
-    @DeleteMapping("/api/projects/{projectId}")
-@PreAuthorize("hasRole('USER')")
-public ResponseEntity<?> deleteOwnProject(
-    @PathVariable Long projectId,
-    Authentication authentication
-) {
-    Projects project = projectsRepository.findById(projectId)
-        .orElseThrow(() -> new RuntimeException("Project not found"));
+            // Check if the authenticated user owns this project
+            String username = authentication.getName();
+            if (!project.getUser().getEmail().equals(username)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You can only delete your own projects");
+            }
 
-String username = authentication.getName();
-if (!project.getUser().getUsername().equals(username)) {
-    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Not authorized to delete this project");
-}
-projectsRepository.delete(project);
-return ResponseEntity.ok("Project deleted successfully");
-}
+            projectsRepository.delete(project);
+            return ResponseEntity.ok("Project deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error deleting project: " + e.getMessage());
+        }
+    }
+
+    // Admin endpoint to delete all projects (for cleanup)
+    @DeleteMapping("/admin/delete-all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteAllProjects() {
+        try {
+            long count = projectsRepository.count();
+            projectsRepository.deleteAll();
+            return ResponseEntity.ok("Deleted " + count + " projects successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error deleting all projects: " + e.getMessage());
+        }
+    }
 
 }

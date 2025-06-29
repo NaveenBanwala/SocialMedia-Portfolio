@@ -15,6 +15,7 @@ public class UserProfileDTO {
     private List<String> skills; 
 
     private List<ProjectDTO> projects;
+    private List<String> roles;
 }
 
 

@@ -5,6 +5,8 @@ import Register from './pages/Register.jsx';
 import Profile from './pages/Profile.jsx';
 import EditProfile from './pages/EditProfile.jsx'; 
 import ProjectDetails from './pages/ProjectDetails';
+import AddProjectPage from './pages/AddProjectPage.jsx';
+import CreatePost from './pages/CreatePost.jsx';
 import Navbar from './components/Navbar';
 // import Search from './pages/Search.jsx'; // Remove old Search if not needed
 import DashboardPage from './pages/DashboardPage.jsx';
@@ -45,6 +47,14 @@ const AppRoutes = () => {
         <Route
             path="/edit-profile"
             element={isAuthenticated ? <EditProfile /> : <Navigate to="/login" />}
+        />
+        <Route
+            path="/add-project"
+            element={isAuthenticated ? <AddProjectPage /> : <Navigate to="/login" />}
+        />
+        <Route
+            path="/create-post"
+            element={isAuthenticated ? <CreatePost /> : <Navigate to="/login" />}
         />
         <Route
             path="/search"

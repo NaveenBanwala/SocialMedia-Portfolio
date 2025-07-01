@@ -1,10 +1,27 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../Api/AuthContext.jsx';
+import api from '../Api/api.jsx';
 
 function Navbar() {
   const { isAuthenticated, logout, isAdmin, user } = useAuth();
   const navigate = useNavigate();
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      if (user && user.id) {
+        try {
+          const res = await api.get(`/users/${user.id}/notifications`);
+          // Count only unread notifications
+          setNotifCount(res.data.filter(n => !n.read).length);
+        } catch (err) {
+          setNotifCount(0);
+        }
+      }
+    };
+    fetchNotifications();
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -87,8 +104,9 @@ function Navbar() {
         {/* Inbox Link */}
         <Link to="/inbox" className="relative ml-4">
           <span className="material-icons">inbox</span>
-          {/* Dummy badge for new notifications */}
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">3</span>
+          {notifCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">{notifCount}</span>
+          )}
         </Link>
       </div>
 

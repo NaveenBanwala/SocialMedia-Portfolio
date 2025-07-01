@@ -16,6 +16,10 @@ public class UserProfileDTO {
 
     private List<ProjectDTO> projects;
     private List<String> roles;
+
+    // Add follower/following counts for profile display
+    private int followersCount;
+    private int followingCount;
 }
 
 

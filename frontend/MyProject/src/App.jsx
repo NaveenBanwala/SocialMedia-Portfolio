@@ -12,6 +12,7 @@ import Navbar from './components/Navbar';
 import DashboardPage from './pages/DashboardPage.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
 import SearchUserPage from './pages/SearchUserPage.jsx';
+import Inbox from './pages/Inbox.jsx';
 import { AuthProvider, useAuth } from './Api/AuthContext.jsx';
 
 const AppRoutes = () => {
@@ -63,6 +64,10 @@ const AppRoutes = () => {
         <Route
             path="/project/:id"
             element={isAuthenticated ? <ProjectDetails /> : <Navigate to="/login" />}
+        />
+        <Route
+            path="/inbox"
+            element={isAuthenticated ? <Inbox /> : <Navigate to="/login" />}
         />
 
         {/* 404 fallback */}

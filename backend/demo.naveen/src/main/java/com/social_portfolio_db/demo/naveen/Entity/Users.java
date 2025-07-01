@@ -72,17 +72,64 @@ public class Users {
     // Skills mapping (assuming unidirectional OneToMany for simplicity)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Skills> skills = new ArrayList<>();
 
     // Projects mapping
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Projects> projects = new ArrayList<>();
 
     // Liked projects
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<ProjectsLike> likedProjects = new ArrayList<>();
+
+    // Profiles that this user has liked
+    @OneToMany(mappedBy = "likedBy", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private List<ProfileLike> likedProfiles = new ArrayList<>();
+
+    // Profiles that have liked this user
+    @OneToMany(mappedBy = "likedUser", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private List<ProfileLike> receivedLikes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private List<Post> posts = new ArrayList<>();
+
+    // Posts that this user has liked
+    @ManyToMany(mappedBy = "likedBy")
+    @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Set<Post> likedPosts = new HashSet<>();
+
+    // Followers and following
+    @ManyToMany
+    @JoinTable(
+        name = "user_followers",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "follower_id")
+    )
+    @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Set<Users> followers = new HashSet<>();
+
+    @ManyToMany(mappedBy = "followers")
+    @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Set<Users> following = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private List<Notification> notifications = new ArrayList<>();
 
     // ✅ Setter method for profile image path
     public void profilePicUrl(String path) {
@@ -94,34 +141,4 @@ public class Users {
         this.skills.clear();
         this.skills.addAll(newSkills);
     }
-
-
-    // Profiles that this user has liked
-@OneToMany(mappedBy = "likedBy", cascade = CascadeType.ALL, orphanRemoval = true)
-@Builder.Default
-private List<ProfileLike> likedProfiles = new ArrayList<>();
-
-// Profiles that have liked this user
-@OneToMany(mappedBy = "likedUser", cascade = CascadeType.ALL, orphanRemoval = true)
-@Builder.Default
-private List<ProfileLike> receivedLikes = new ArrayList<>();
-
-
-@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-@Builder.Default
-@JsonIgnoreProperties("user")
-private List<Post> posts = new ArrayList<>();
-
-// Posts that this user has liked
-/*
-@ManyToMany
-@JoinTable(
-    name = "post_likes",
-    joinColumns = @JoinColumn(name = "user_id"),
-    inverseJoinColumns = @JoinColumn(name = "post_id")
-)
-@Builder.Default
-private Set<Post> likedPosts = new HashSet<>();
-*/
-
 }

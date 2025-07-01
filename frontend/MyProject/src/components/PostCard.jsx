@@ -4,10 +4,11 @@ import api from '../Api/api.jsx';
 
 const PostCard = ({ post }) => {
   const { user: currentUser } = useAuth();
-  // const [liked, setLiked] = useState(false);
-  // const [likeCount, setLikeCount] = useState(0);
-  // const [loading, setLoading] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [friendRequestSent, setFriendRequestSent] = useState(false);
+  const [friendRequestStatus, setFriendRequestStatus] = useState(null);
 
   // Helper function to construct full image URL
   const getImageUrl = (imagePath) => {
@@ -43,54 +44,72 @@ const PostCard = ({ post }) => {
     }
   };
 
-  // Fetch like status and count
-  /*
   useEffect(() => {
     const fetchLikeStatus = async () => {
       try {
-        const response = await api.get(`/posts/${post.id}/likes`);
-        setLikeCount(response.data.likeCount);
-        const likedByCurrentUser = response.data.likedBy.some(
-          user => user.id === currentUser?.id
-        );
-        setLiked(likedByCurrentUser);
+        if (!currentUser) return;
+        // Get like count
+        const countRes = await api.get(`/likes/post/${post.id}/count`);
+        setLikeCount(countRes.data);
+        // Check if user liked
+        // (Optional: If you have a hasUserLikedPost endpoint, use it. Otherwise, infer from post.likedBy if available)
+        // For now, assume backend returns likedBy array in post (if not, skip this)
+        if (post.likedBy && Array.isArray(post.likedBy)) {
+          setLiked(post.likedBy.some(u => u.id === currentUser.id));
+        } else {
+          // Fallback: try to like and catch error if already liked
+          // Or skip
+        }
       } catch (error) {
         console.error('Error fetching like status:', error);
       }
     };
-
-    if (post.id) {
+    if (post.id && currentUser) {
       fetchLikeStatus();
     }
-  }, [post.id, currentUser?.id]);
+  }, [post.id, currentUser]);
 
-  // Toggle like
+  useEffect(() => {
+    const fetchFriendRequestStatus = async () => {
+      if (!currentUser || !post.user?.id || post.user.id === currentUser.id) return;
+      try {
+        const res = await api.get(`/users/${post.user.id}/friend-request/status`);
+        setFriendRequestStatus(res.data ? res.data.status : null);
+      } catch (err) {
+        setFriendRequestStatus(null);
+      }
+    };
+    fetchFriendRequestStatus();
+  }, [currentUser, post.user?.id]);
+
   const handleLike = async () => {
     if (!currentUser) return;
-    
     setLoading(true);
     try {
-      await api.post(`/posts/${post.id}/like`);
-      setLiked(!liked);
-      setLikeCount(liked ? likeCount - 1 : likeCount + 1);
+      if (!liked) {
+        await api.post(`/likes/post/${post.id}?userId=${currentUser.id}`);
+        setLiked(true);
+        setLikeCount(likeCount + 1);
+      } else {
+        await api.post(`/likes/post/${post.id}/unlike?userId=${currentUser.id}`);
+        setLiked(false);
+        setLikeCount(likeCount - 1);
+      }
     } catch (error) {
       console.error('Error toggling like:', error);
     } finally {
       setLoading(false);
     }
   };
-  */
 
   // Send friend request
   const handleFriendRequest = async () => {
     if (!currentUser || post.user.id === currentUser.id) return;
-    
     try {
       await api.post(`/users/${post.user.id}/friend-request`);
-      setFriendRequestSent(true);
+      setFriendRequestStatus('PENDING');
       alert('Friend request sent successfully!');
     } catch (error) {
-      console.error('Error sending friend request:', error);
       alert('Failed to send friend request: ' + (error.response?.data || error.message));
     }
   };
@@ -162,8 +181,7 @@ const PostCard = ({ post }) => {
       {/* Action buttons */}
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
         <div className="flex items-center gap-3">
-    {/* Like button */}
-          {/*
+          {/* Like button */}
           <button
             onClick={handleLike}
             disabled={loading}
@@ -173,21 +191,22 @@ const PostCard = ({ post }) => {
           >
             {liked ? '❤️' : '🤍'} {likeCount > 0 && <span>({likeCount})</span>}
           </button>
-          */}
 
           {/* Friend request button - show for different users */}
           {currentUser && 
             post.user?.id !== currentUser.id && (
             <button
               onClick={handleFriendRequest}
-              disabled={friendRequestSent}
+              disabled={friendRequestStatus === 'PENDING' || friendRequestStatus === 'ACCEPTED'}
               className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border-2 transition
-                ${friendRequestSent 
-                  ? 'bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed' 
-                  : 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'
-                }`}
+                ${friendRequestStatus === 'PENDING' ? 'bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed' :
+                  friendRequestStatus === 'ACCEPTED' ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed' :
+                  'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}
+              `}
             >
-              {friendRequestSent ? '✅ Request Sent' : '👥 Add Friend'}
+              {friendRequestStatus === 'PENDING' ? '⏳ Pending' :
+                friendRequestStatus === 'ACCEPTED' ? '✅ Friends' :
+                '👥 Add Friend'}
             </button>
           )}
         </div>

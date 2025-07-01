@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../Api/api.jsx';
 
-const LikeButton = ({ postId, initialLiked = false, initialLikes = 0 }) => {
+const LikeButton = ({ type = 'post', id, initialLiked = false, initialLikes = 0, userId }) => {
   // State for like status and count
   const [liked, setLiked] = useState(initialLiked);
   const [likes, setLikes] = useState(initialLikes);
@@ -11,13 +11,16 @@ const LikeButton = ({ postId, initialLiked = false, initialLikes = 0 }) => {
   const toggleLike = async () => {
     setLoading(true);
     try {
-      if (!liked) {
-        await api.post(`/posts/${postId}/like`);
-        setLikes(likes + 1);
-      } else {
-        await api.post(`/posts/${postId}/unlike`);
-        setLikes(likes - 1);
+      console.log('LikeButton clicked:', { type, id, liked });
+      if (type === 'post') {
+        await api.post(`/posts/${id}/${liked ? 'unlike' : 'like'}`);
+      } else if (type === 'project') {
+        // For project, like/unlike endpoints may be the same, backend should handle toggle
+        await api.post(`/likes/project/${id}`, null, { params: { userId } });
+      } else if (type === 'profile') {
+        await api.post(`/likes/profile/${id}`, null, { params: { likedById: userId } });
       }
+      setLikes(liked ? likes - 1 : likes + 1);
       setLiked(!liked);
     } catch (err) {
       console.error('Error toggling like:', err);

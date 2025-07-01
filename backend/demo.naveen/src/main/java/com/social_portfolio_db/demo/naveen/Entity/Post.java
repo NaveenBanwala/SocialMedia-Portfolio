@@ -44,8 +44,6 @@ public class Post {
     @JsonIgnoreProperties({"posts", "likedProjects", "likedProfiles", "receivedLikes", "password", "roles"})
     private Users user;
 
-    // Temporarily comment out likes to test if this is causing the issue
-    /*
     @ManyToMany
     @JoinTable(
         name = "post_likes",
@@ -53,6 +51,5 @@ public class Post {
         inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private Set<Users> likedBy = new HashSet<>();
-    */
 }
 

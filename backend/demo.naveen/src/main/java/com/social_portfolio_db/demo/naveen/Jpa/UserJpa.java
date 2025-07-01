@@ -34,6 +34,19 @@ public interface UserJpa extends JpaRepository<Users, Long> {
                         @Param("skill") String skill,
                         @Param("location") String location);
 
+    @Query("SELECT u.followers FROM Users u WHERE u.id = :userId")
+    List<Users> findFollowers(@Param("userId") Long userId);
 
+    @Query("SELECT u.following FROM Users u WHERE u.id = :userId")
+    List<Users> findFollowing(@Param("userId") Long userId);
+
+    @Query("SELECT u FROM Users u LEFT JOIN u.followers f GROUP BY u.id ORDER BY COUNT(f) DESC")
+    List<Users> findTopUsersByFollowers();
+
+    @Query(value = "SELECT u.* FROM users u LEFT JOIN user_followers f ON u.id = f.user_id GROUP BY u.id ORDER BY COUNT(f.follower_id) DESC LIMIT 10", nativeQuery = true)
+    List<Users> findTop10UsersByFollowers();
+
+    @Query("SELECT u FROM Users u LEFT JOIN FETCH u.skills WHERE u.id = :id")
+    Optional<Users> findByIdWithSkills(@Param("id") Long id);
 
 }

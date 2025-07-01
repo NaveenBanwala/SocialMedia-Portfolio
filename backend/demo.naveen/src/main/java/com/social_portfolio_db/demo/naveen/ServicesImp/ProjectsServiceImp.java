@@ -72,12 +72,20 @@ public class ProjectsServiceImp implements ProjectService {
         return toDto(projectsRepo.findById(projectId).orElseThrow(() -> new RuntimeException("Not found")));
     }
     private ProjectDTO toDto(Projects p) {
+        String username = null;
+        if (p.getUser() != null && p.getUser().getUsername() != null && !p.getUser().getUsername().trim().isEmpty()) {
+            username = p.getUser().getUsername();
+        } else {
+            username = "Unknown";
+        }
+        System.out.println("Project " + p.getId() + " user: " + (p.getUser() != null ? p.getUser().getId() : "null") + " username: " + username);
         return ProjectDTO.builder()
                 .id(p.getId())
                 .title(p.getTitle())
                 .description(p.getDescription())
                 .imageUrl(p.getImageUrl())
                 .likeCount(p.getLikes() != null ? p.getLikes().size() : 0)
+                .username(username)
                 .build();
     }
 }

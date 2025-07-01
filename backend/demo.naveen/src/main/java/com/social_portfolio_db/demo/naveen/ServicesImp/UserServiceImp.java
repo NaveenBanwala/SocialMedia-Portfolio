@@ -41,6 +41,10 @@ public class UserServiceImp implements UserService {
     public UserProfileDTO getUserProfile(Long userId) {
         Users user = userRepo.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        // Force initialization of skills to avoid LazyInitializationException
+        user.getSkills().size();
+        // Force initialization of projects to avoid LazyInitializationException
+        user.getProjects().size();
         return UserProfileMapper.toDto(user);
     }
 

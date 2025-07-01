@@ -17,12 +17,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectDTO;
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectUploadRequest;
 import com.social_portfolio_db.demo.naveen.Entity.Projects;
 import com.social_portfolio_db.demo.naveen.Services.ProjectService;
 import com.social_portfolio_db.demo.naveen.Jpa.ProjectsRepository;
+import com.social_portfolio_db.demo.naveen.ServicesImp.LikeService;
 
 
 @RestController
@@ -32,6 +35,7 @@ public class ProjectsController {
 
     private final ProjectService projectsService;
     private final ProjectsRepository projectsRepository;
+    private final LikeService likeService;
 
     @PostMapping("/upload")
     public ResponseEntity<String> uploadProject(
@@ -95,6 +99,53 @@ public class ProjectsController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Error deleting all projects: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/{projectId}/like")
+    public ResponseEntity<?> likeProject(@PathVariable Long projectId, @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            Long userId = getCurrentUserId(userDetails);
+            likeService.likeProject(userId, projectId);
+            return ResponseEntity.ok("Project liked");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error liking project: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{projectId}/unlike")
+    public ResponseEntity<?> unlikeProject(@PathVariable Long projectId, @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            Long userId = getCurrentUserId(userDetails);
+            likeService.unlikeProject(userId, projectId);
+            return ResponseEntity.ok("Project unliked");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error unliking project: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{projectId}/like-status")
+    public ResponseEntity<?> getProjectLikeStatus(@PathVariable Long projectId, @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            Long userId = getCurrentUserId(userDetails);
+            boolean liked = likeService.hasUserLikedProject(userId, projectId);
+            return ResponseEntity.ok(java.util.Map.of("liked", liked));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error getting like status: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{projectId}/likes")
+    public ResponseEntity<?> getProjectLikeCount(@PathVariable Long projectId) {
+        try {
+            long count = likeService.getProjectLikeCount(projectId);
+            return ResponseEntity.ok(java.util.Map.of("likeCount", count));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error getting like count: " + e.getMessage());
+        }
+    }
+
+    private Long getCurrentUserId(UserDetails userDetails) {
+        return likeService.getUserRepo().findByEmail(userDetails.getUsername()).orElseThrow().getId();
     }
 
 }

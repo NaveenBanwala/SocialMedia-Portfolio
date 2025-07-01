@@ -13,19 +13,18 @@ public class ProjectDTO {
     private String description;
     private String imageUrl;
     private int likeCount;
-    // public static Object builder() {
-    //     // TODO Auto-generated method stub
-    //     throw new UnsupportedOperationException("Unimplemented method 'builder'");
-    // }
+    private String username;
+   
 
     public ProjectDTO() {
     }
-    public ProjectDTO(Long id, String title, String description, String imageUrl, int likeCount) {
+    public ProjectDTO(Long id, String title, String description, String imageUrl, int likeCount, String username) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.imageUrl = imageUrl;
         this.likeCount = likeCount;
+        this.username = username;
     }
 }
     

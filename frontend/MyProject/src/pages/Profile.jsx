@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../Api/api.jsx';
+import { useAuth } from '../Api/AuthContext.jsx';
 
 const Profile = () => {
   const { id } = useParams(); // 'me' or user id
@@ -17,6 +18,10 @@ const Profile = () => {
   const [loadingPosts, setLoadingPosts] = useState(false);
   const fileInputRef = useRef(null);
   const resumeInputRef = useRef(null);
+  const { user: currentUser } = useAuth();
+  const [projectLikes, setProjectLikes] = useState({}); // { [projectId]: { liked: bool, count: number } }
+  const [friendStatus, setFriendStatus] = useState(null);
+  const [friendLoading, setFriendLoading] = useState(false);
 
   // Default profile image component
   const DefaultProfileImage = ({ username, size = "w-24 h-24" }) => (
@@ -329,6 +334,69 @@ const Profile = () => {
     fetchProfile();
   }, [id, navigate]);
 
+  useEffect(() => {
+    if (user && user.projects && Array.isArray(user.projects)) {
+      user.projects.forEach(async (project) => {
+        try {
+          const countRes = await api.get(`/projects/${project.id}/likes`);
+          let liked = false;
+          if (currentUser) {
+            const statusRes = await api.get(`/projects/${project.id}/like-status`, { headers: { Authorization: localStorage.getItem('token') } });
+            liked = statusRes.data.liked;
+          }
+          setProjectLikes(prev => ({ ...prev, [project.id]: { liked, count: countRes.data.likeCount } }));
+        } catch (err) {
+          setProjectLikes(prev => ({ ...prev, [project.id]: { liked: false, count: 0 } }));
+        }
+      });
+    }
+  }, [user && user.projects, currentUser]);
+
+  useEffect(() => {
+    // Fetch friend status
+    const fetchFriendStatus = async () => {
+      if (!user?.id || !currentUser || user.id === currentUser.id) return;
+      try {
+        const res = await api.get(`/users/${user.id}/friend-request/status`);
+        setFriendStatus(res.data ? res.data.status : null);
+      } catch (err) {
+        setFriendStatus(null);
+      }
+    };
+    fetchFriendStatus();
+  }, [user?.id, currentUser]);
+
+  const handleFriend = async () => {
+    if (!currentUser || user.id === currentUser.id) return;
+    setFriendLoading(true);
+    try {
+      if (friendStatus === 'ACCEPTED') {
+        if (window.confirm('Are you sure you want to unfriend this user?')) {
+          await api.post(`/users/${user.id}/unfriend`, { userId: currentUser.id });
+          setFriendStatus(null);
+        }
+      } else if (!friendStatus) {
+        await api.post(`/users/${user.id}/friend-request`);
+        setFriendStatus('PENDING');
+      }
+    } catch (err) {}
+    setFriendLoading(false);
+  };
+
+  const handleProjectLike = async (projectId) => {
+    if (!currentUser) return;
+    const projectLike = projectLikes[projectId] || { liked: false, count: 0 };
+    try {
+      if (!projectLike.liked) {
+        await api.post(`/projects/${projectId}/like`, {}, { headers: { Authorization: localStorage.getItem('token') } });
+        setProjectLikes(prev => ({ ...prev, [projectId]: { liked: true, count: projectLike.count + 1 } }));
+      } else {
+        await api.post(`/projects/${projectId}/unlike`, {}, { headers: { Authorization: localStorage.getItem('token') } });
+        setProjectLikes(prev => ({ ...prev, [projectId]: { liked: false, count: projectLike.count - 1 } }));
+      }
+    } catch (err) {}
+  };
+
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!user) return <div className="p-6">Loading...</div>;
 
@@ -397,6 +465,15 @@ const Profile = () => {
             <h1 className="text-2xl font-bold text-[#32a86d]">{user.username}</h1>
             <p className="text-sm text-gray-600">{user.email}</p>
             <p className="text-sm text-gray-600">{user.location}</p>
+            {/* Followers/Following counts */}
+            <div className="flex gap-4 mt-2">
+              <span className="text-sm text-gray-700 font-semibold cursor-pointer">
+                Followers: {user.followersCount ?? 0}
+              </span>
+              <span className="text-sm text-gray-700 font-semibold cursor-pointer">
+                Following: {user.followingCount ?? 0}
+              </span>
+            </div>
           </div>
           
           {isOwnProfile && (
@@ -420,6 +497,15 @@ const Profile = () => {
                 Add Project
               </button>
             </div>
+          )}
+          {currentUser && user && user.id !== currentUser.id && (
+            <button
+              onClick={handleFriend}
+              disabled={friendLoading}
+              className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition ${friendStatus === 'ACCEPTED' ? 'bg-green-200 text-green-700 border-green-300' : friendStatus === 'PENDING' ? 'bg-gray-200 text-gray-600 border-gray-300' : 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}`}
+            >
+              {friendStatus === 'ACCEPTED' ? 'Friends' : friendStatus === 'PENDING' ? 'Pending' : 'Add Friend'}
+            </button>
           )}
         </div>
 
@@ -603,7 +689,7 @@ const Profile = () => {
             )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {user.projects && Array.isArray(user.projects) && user.projects.length > 0 ? (
+            {user && user.projects && Array.isArray(user.projects) && user.projects.length > 0 ? (
               user.projects.map((project) => (
                 <div key={project.id || project.title} className="bg-white p-4 rounded shadow relative">
                   {isOwnProfile && (
@@ -626,6 +712,11 @@ const Profile = () => {
                 />
                 <h3 className="text-lg font-bold text-[#32a86d]">{project.title}</h3>
                 <p className="text-sm text-gray-600 mb-2">{project.description}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-pink-600 font-semibold">
+                    ❤️ {projectLikes[project.id]?.count || 0}
+                  </span>
+                </div>
                 <button
                   onClick={() => navigate(`/project/${project.id}`)}
                   className="text-sm bg-[#32a86d] text-white px-3 py-1 rounded hover:bg-[#2c915d]"

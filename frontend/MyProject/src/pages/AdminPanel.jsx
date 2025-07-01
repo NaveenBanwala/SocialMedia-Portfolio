@@ -7,6 +7,7 @@ const AdminPanel = () => {
   // State for users and projects
   const [users, setUsers] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [mostFollowed, setMostFollowed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -14,12 +15,14 @@ const AdminPanel = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [userRes, projectRes] = await Promise.all([
+        const [userRes, projectRes, mostFollowedRes] = await Promise.all([
           api.get('/admin/users'), // Adjust endpoint if needed
           api.get('/admin/projects'), // Adjust endpoint if needed
+          api.get('/admin/most-followed-users'),
         ]);
         setUsers(userRes.data);
         setProjects(projectRes.data);
+        setMostFollowed(mostFollowedRes.data);
       } catch (err) {
         setError('Error loading admin data.');
       } finally {
@@ -65,18 +68,6 @@ const AdminPanel = () => {
     }
   };
 
-  // Handle delete all projects
-  const handleDeleteAllProjects = async () => {
-    if (!window.confirm('Are you sure you want to delete ALL projects? This action cannot be undone!')) return;
-    try {
-      const response = await api.delete('/projects/admin/delete-all');
-      alert(response.data);
-      setProjects([]);
-    } catch (err) {
-      alert('Error deleting all projects: ' + (err.response?.data || err.message));
-    }
-  };
-
   if (loading) return <div className="p-6">Loading admin data...</div>;
 
   return (
@@ -84,18 +75,6 @@ const AdminPanel = () => {
       <h1 className="text-2xl font-bold text-[#32a86d] border-b-2 border-[#32a86d] pb-2 mb-6">Admin Panel</h1>
       {error && <div className="text-red-500 mb-4">{error}</div>}
       
-      {/* Admin Actions */}
-      <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded">
-        <h3 className="text-lg font-semibold text-red-800 mb-2">Danger Zone</h3>
-        <button
-          onClick={handleDeleteAllProjects}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-        >
-          Delete All Projects ({projects.length} projects)
-        </button>
-        <p className="text-sm text-red-600 mt-1">This will permanently delete all projects from all users.</p>
-      </div>
-
       {/* Users Table */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-[#32a86d] mb-2">Users ({users.length} total)</h2>
@@ -105,6 +84,9 @@ const AdminPanel = () => {
               <th className="p-2 text-left">User</th>
               <th className="p-2 text-left">Email</th>
               <th className="p-2 text-left">Role</th>
+              <th className="p-2 text-center">Followers</th>
+              <th className="p-2 text-center">Following</th>
+              <th className="p-2 text-center">Post Likes</th>
               <th className="p-2 text-left">Actions</th>
             </tr>
           </thead>
@@ -125,6 +107,7 @@ const AdminPanel = () => {
             <tr className="bg-[#32a86d] text-white">
               <th className="p-2">Title</th>
               <th className="p-2">Owner Email</th>
+              <th className="p-2 text-center">Likes</th>
               <th className="p-2">Actions</th>
             </tr>
           </thead>
@@ -135,6 +118,28 @@ const AdminPanel = () => {
           </tbody>
         </table>
         {projects.length === 0 && <div className="text-gray-500 mt-2">No projects found.</div>}
+      </div>
+
+      {/* Most Followed Users Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-[#32a86d] mb-2">Most Followed Users</h2>
+        <table className="w-full border-2 border-[#32a86d] rounded-xl bg-white">
+          <thead>
+            <tr className="bg-[#32a86d] text-white">
+              <th className="p-2 text-left">User</th>
+              <th className="p-2 text-center">Followers</th>
+            </tr>
+          </thead>
+          <tbody>
+            {mostFollowed.map(user => (
+              <tr key={user.userId}>
+                <td className="p-2">{user.username}</td>
+                <td className="p-2 text-center">{user.followerCount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {mostFollowed.length === 0 && <div className="text-gray-500 mt-2">No data available.</div>}
       </div>
     </div>
   );

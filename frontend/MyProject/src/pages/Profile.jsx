@@ -312,6 +312,7 @@ const Profile = () => {
           }
         }
         
+        // If we came from EditProfile and have updated user info, use it
         setUser(res.data);
         setIsOwnProfile(id === 'me');
         setError('');
@@ -397,9 +398,6 @@ const Profile = () => {
     } catch (err) {}
   };
 
-  if (error) return <div className="p-6 text-red-600">{error}</div>;
-  if (!user) return <div className="p-6">Loading...</div>;
-
   // Helper function to safely get skill name
   const getSkillName = (skill) => {
     if (typeof skill === 'string') return skill;
@@ -407,6 +405,9 @@ const Profile = () => {
     if (skill && typeof skill === 'object' && skill.name) return skill.name;
     return String(skill);
   };
+
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
+  if (!user) return <div className="p-6">Loading...</div>;
 
   // Show profile as usual
   return (
@@ -463,7 +464,7 @@ const Profile = () => {
           
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-[#32a86d]">{user.username}</h1>
-            <p className="text-sm text-gray-600">{user.email}</p>
+            <p className="text-sm text-gray-600">{user.displayName && user.displayName !== user.username ? user.displayName : ''}</p>
             <p className="text-sm text-gray-600">{user.location}</p>
             {/* Followers/Following counts */}
             <div className="flex gap-4 mt-2">
@@ -479,17 +480,11 @@ const Profile = () => {
           {isOwnProfile && (
             <div className="absolute top-0 right-0 flex gap-2">
               <button
-                onClick={() => window.location.reload()}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                Refresh
-              </button>
-            <button
                 onClick={() => navigate('/edit-profile')}
                 className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d]"
-            >
-              Edit Profile
-            </button>
+              >
+                Edit Profile
+              </button>
               <button
                 onClick={() => navigate('/add-project')}
                 className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d]"
@@ -513,36 +508,24 @@ const Profile = () => {
         <div className="mb-6 p-4 bg-gray-50 rounded">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#32a86d]">📋 Personal Information</h2>
-            {isOwnProfile && (
-              <button
-                onClick={() => navigate('/edit-profile')}
-                className="text-sm bg-[#32a86d] text-white px-3 py-1 rounded hover:bg-[#2c915d]"
-              >
-                Edit
-              </button>
-            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-600">Username</p>
+              <p className="text-sm text-gray-600">Username (used for login)</p>
               <p className="font-medium">{user.username}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Email</p>
+              <p className="text-sm text-gray-600">Email (used for login)</p>
               <p className="font-medium">{user.email}</p>
             </div>
-            {user.location && (
-              <div>
-                <p className="text-sm text-gray-600">Location</p>
-                <p className="font-medium">{user.location}</p>
-              </div>
-            )}
-            {user.bio && (
-              <div className="md:col-span-2">
-                <p className="text-sm text-gray-600">Bio</p>
-                <p className="font-medium">{user.bio}</p>
-              </div>
-            )}
+            <div>
+              <p className="text-sm text-gray-600">Location</p>
+              <p className="font-medium">{user.location}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-sm text-gray-600">Bio</p>
+              <p className="font-medium">{user.bio}</p>
+            </div>
           </div>
         </div>
 
@@ -550,39 +533,60 @@ const Profile = () => {
         <div className="mb-6 p-4 bg-gray-50 rounded">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#32a86d]">📄 Resume</h2>
-            {isOwnProfile && (
-              <div className="flex gap-2">
-                <button
-                  onClick={triggerResumeInput}
-                  disabled={uploadingResume}
-                  className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
-                >
-                  {uploadingResume ? 'Uploading...' : 'Upload Resume'}
-                </button>
-                {user.resumeUrl && (
-                  <>
-                    <button
-                      onClick={downloadResume}
-                      className="text-sm bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                    >
-                      Download
-                    </button>
-                    <button
-                      onClick={removeResume}
-                      className="text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    >
-                      Remove
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
           </div>
-          {user.resumeUrl ? (
-            <p className="text-sm text-gray-600">Resume uploaded ✓</p>
-          ) : (
-            <p className="text-sm text-gray-500">No resume uploaded yet.</p>
-          )}
+          <div className="flex flex-col gap-2">
+            {user.resumeUrl ? (
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-gray-600">Resume uploaded ✓</p>
+                <button
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  onClick={async () => {
+                    try {
+                      // Extract filename from user.resumeUrl
+                      const filename = user.resumeUrl.split('/files/resumes/')[1];
+                      const response = await api.get(`/files/resumes/${filename}`, { responseType: 'blob' });
+                      const blob = new Blob([response.data], { type: 'application/pdf' });
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `${user.username}_uploaded_resume.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                      alert('Failed to download uploaded resume.');
+                    }
+                  }}
+                >
+                  Download Uploaded Resume
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No resume uploaded yet.</p>
+            )}
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-fit"
+              onClick={async () => {
+                try {
+                  const response = await api.get(`/users/${user.id}/resume/generated`, { responseType: 'blob' });
+                  const blob = new Blob([response.data], { type: 'application/pdf' });
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${user.username}_profile_resume.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  alert('Failed to download generated resume.');
+                }
+              }}
+            >
+              Download Generated Resume
+            </button>
+          </div>
           {/* Hidden resume input */}
           <input
             ref={resumeInputRef}
@@ -606,42 +610,37 @@ const Profile = () => {
               </button>
             )}
           </div>
-          
           {/* Skills Management Box */}
-          <div className="bg-white p-4 rounded border">
-            {showSkillInput && isOwnProfile && (
-              <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
-                <h3 className="text-sm font-medium text-blue-800 mb-2">Add New Skill</h3>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    placeholder="Enter skill name (e.g., JavaScript, React, Python)"
-                    className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d]"
-                    onKeyPress={(e) => e.key === 'Enter' && addSkill()}
-                  />
-                  <button
-                    onClick={addSkill}
-                    disabled={!newSkill.trim()}
-                    className="text-sm bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Add
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowSkillInput(false);
-                      setNewSkill('');
-                    }}
-                    className="text-sm bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                  >
-                    Cancel
-                  </button>
-                </div>
+          {showSkillInput && isOwnProfile && (
+            <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
+              <h3 className="text-sm font-medium text-blue-800 mb-2">Add New Skill</h3>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSkill}
+                  onChange={e => setNewSkill(e.target.value)}
+                  placeholder="Enter skill name (e.g., JavaScript, React, Python)"
+                  className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d]"
+                  onKeyPress={e => e.key === 'Enter' && addSkill()}
+                />
+                <button
+                  onClick={addSkill}
+                  disabled={!newSkill.trim()}
+                  className="text-sm bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => { setShowSkillInput(false); setNewSkill(''); }}
+                  className="text-sm bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
               </div>
-            )}
-            
-          <div className="flex flex-wrap gap-2">
+            </div>
+          )}
+          <div className="bg-white p-4 rounded border">
+            <div className="flex flex-wrap gap-2">
               {user.skills && Array.isArray(user.skills) && user.skills.length > 0 ? (
                 user.skills.map((skill, i) => {
                   const skillName = getSkillName(skill);
@@ -657,14 +656,13 @@ const Profile = () => {
                           ×
                         </button>
                       )}
-              </span>
+                    </span>
                   );
                 })
               ) : (
                 <p className="text-gray-500">No skills listed yet.</p>
               )}
             </div>
-            
             {isOwnProfile && user.skills && user.skills.length > 0 && (
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <p className="text-xs text-gray-600">
@@ -679,14 +677,6 @@ const Profile = () => {
         <div className="p-4 bg-gray-50 rounded">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#32a86d]">💼 Projects</h2>
-            {isOwnProfile && (
-              <button
-                onClick={() => navigate('/add-project')}
-                className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] text-sm"
-              >
-                Add Project
-              </button>
-            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {user && user.projects && Array.isArray(user.projects) && user.projects.length > 0 ? (

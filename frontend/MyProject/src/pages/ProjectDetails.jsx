@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../Api/api';
+import { useAuth } from '../Api/AuthContext.jsx';
 
 const ProjectDetails = () => {
     const { id } = useParams();
@@ -8,6 +9,10 @@ const ProjectDetails = () => {
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [likeCount, setLikeCount] = useState(0);
+    const [liked, setLiked] = useState(false);
+    const [likeLoading, setLikeLoading] = useState(false);
+    const { user: currentUser } = useAuth();
 
     // Helper function to construct full image URL
     const getImageUrl = (imagePath) => {
@@ -26,7 +31,7 @@ const ProjectDetails = () => {
                 setLoading(true);
                 const res = await api.get(`/projects/${id}`);
                 setProject(res.data);
-                console.log('Fetched project:', res.data);
+                setLikeCount(res.data.likeCount || 0);
             } catch (err) {
                 console.error('Failed to fetch project:', err);
                 setError('Failed to load project details');
@@ -34,9 +39,42 @@ const ProjectDetails = () => {
                 setLoading(false);
             }
         };
-
+        const fetchLikeStatus = async () => {
+            try {
+                if (!currentUser) return;
+                const statusRes = await api.get(`/projects/${id}/like-status`, { headers: { Authorization: localStorage.getItem('token') } });
+                setLiked(statusRes.data.liked);
+            } catch (err) {
+                setLiked(false);
+            }
+        };
         fetchProject();
-    }, [id]);
+        fetchLikeStatus();
+    }, [id, currentUser]);
+
+    const handleLike = async () => {
+        if (!currentUser) {
+            alert('You must be logged in to like a project.');
+            return;
+        }
+        setLikeLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            if (!liked) {
+                await api.post(`/projects/${id}/like`, {}, { headers });
+                setLiked(true);
+                setLikeCount(likeCount + 1);
+            } else {
+                await api.post(`/projects/${id}/unlike`, {}, { headers });
+                setLiked(false);
+                setLikeCount(likeCount - 1);
+            }
+        } catch (err) {
+            alert('Failed to update like.');
+        }
+        setLikeLoading(false);
+    };
 
     if (loading) return <div className="p-6">Loading project details...</div>;
     if (error) return <div className="p-6 text-red-600">{error}</div>;
@@ -93,7 +131,7 @@ const ProjectDetails = () => {
                 {/* Project Stats */}
                 <div className="flex items-center gap-6 mb-6 p-4 bg-gray-50 rounded">
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-[#32a86d]">{project.likeCount || 0}</div>
+                        <div className="text-2xl font-bold text-[#32a86d]">{likeCount}</div>
                         <div className="text-sm text-gray-600">Likes</div>
                     </div>
                     <div className="text-center">
@@ -109,10 +147,10 @@ const ProjectDetails = () => {
                         <p>
                             <strong>Created by:</strong>{' '}
                             <Link
-                                to={`/profile/${project.user?.id || project.owner?.id}`}
+                                to={`/profile/${project.userId}`}
                                 className="text-[#32a86d] hover:underline"
                             >
-                                {project.user?.username || project.owner?.name || 'Unknown'}
+                                {project.username}
                             </Link>
                         </p>
                         {project.user?.resumeUrl || project.owner?.resumeUrl ? (
@@ -133,9 +171,22 @@ const ProjectDetails = () => {
 
                 {/* Action Buttons */}
                 <div className="mt-6 flex gap-4">
-                    <button className="bg-[#32a86d] text-white px-6 py-2 rounded hover:bg-[#2c915d] transition">
-                        Like Project
+                    <button
+                        onClick={handleLike}
+                        disabled={likeLoading}
+                        className={`flex items-center gap-1 bg-[#32a86d] text-white px-6 py-2 rounded hover:bg-[#2c915d] transition ${likeLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        title={!currentUser ? 'Login to like this project' : liked ? 'Unlike' : 'Like'}
+                    >
+                        {liked ? '❤️' : '🤍'} Like Project
                     </button>
+                    {currentUser && project.userId === currentUser.id && (
+                        <button
+                            onClick={() => navigate(`/edit-project/${project.id}`)}
+                            className="bg-yellow-500 text-white px-6 py-2 rounded hover:bg-yellow-600 transition"
+                        >
+                            Edit Project
+                        </button>
+                    )}
                     <button
                         onClick={() => navigate(-1)}
                         className="bg-gray-200 text-gray-700 px-6 py-2 rounded hover:bg-gray-300 transition"

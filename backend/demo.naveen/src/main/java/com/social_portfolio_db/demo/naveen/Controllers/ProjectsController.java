@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectDTO;
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectUploadRequest;
@@ -98,6 +99,53 @@ public class ProjectsController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Error deleting all projects: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{projectId}")
+    public ResponseEntity<?> updateProject(
+        @PathVariable Long projectId,
+        @RequestParam("title") String title,
+        @RequestParam("description") String description,
+        @RequestParam(value = "images", required = false) List<MultipartFile> images,
+        Authentication authentication
+    ) {
+        try {
+            Projects project = projectsRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+            // Check if the authenticated user owns this project
+            String username = authentication.getName();
+            if (!project.getUser().getEmail().equals(username)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You can only update your own projects");
+            }
+
+            project.setTitle(title);
+            project.setDescription(description);
+
+            // Handle image upload (replace old images)
+            if (images != null && !images.isEmpty()) {
+                if (images.size() > 2) {
+                    return ResponseEntity.badRequest().body("You can upload a maximum of 2 images per project");
+                }
+                List<String> imagePaths = new java.util.ArrayList<>();
+                String uploadDir = "uploads/projects/";
+                for (MultipartFile file : images) {
+                    String fileName = java.util.UUID.randomUUID() + "_" + file.getOriginalFilename();
+                    java.nio.file.Path path = java.nio.file.Paths.get(uploadDir + fileName);
+                    java.nio.file.Files.createDirectories(path.getParent());
+                    java.nio.file.Files.copy(file.getInputStream(), path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    imagePaths.add("/images/projects/" + fileName);
+                }
+                project.setImageUrl(String.join(",", imagePaths));
+            }
+
+            projectsRepository.save(project);
+            return ResponseEntity.ok("Project updated successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error updating project: " + e.getMessage());
         }
     }
 

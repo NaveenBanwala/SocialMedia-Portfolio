@@ -112,71 +112,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-20 mb-8">
-          {/* Create Post */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-[#32a86d] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                ✍️
-              </div>
-              <h3 className="text-lg font-semibold ml-3 text-[#32a86d]">Create Post</h3>
-            </div>
-            <p className="text-gray-600 mb-4">Share your thoughts and updates with the community.</p>
-            <Link to="/create-post">
-              <button className="w-full bg-[#32a86d] text-white py-2 px-4 rounded hover:bg-[#2c915d] transition">
-                Create Post
-              </button>
-            </Link>
-          </div>
-
-          {/* Upload Profile Picture */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-[#32a86d] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                👤
-              </div>
-              <h3 className="text-lg font-semibold ml-3 text-[#32a86d]">Profile Picture</h3>
-            </div>
-            <p className="text-gray-600 mb-4">Upload a new profile picture to make your profile stand out.</p>
-            <Link to="/profile/me">
-              <button className="w-full bg-[#32a86d] text-white py-2 px-4 rounded hover:bg-[#2c915d] transition">
-                Manage Profile
-              </button>
-            </Link>
-          </div>
-
-          {/* Add New Project */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-[#32a86d] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                📁
-              </div>
-              <h3 className="text-lg font-semibold ml-3 text-[#32a86d]">New Project</h3>
-            </div>
-            <p className="text-gray-600 mb-4">Showcase your work by adding a new project with images.</p>
-            <Link to="/add-project">
-              <button className="w-full bg-[#32a86d] text-white py-2 px-4 rounded hover:bg-[#2c915d] transition">
-                Add Project
-              </button>
-            </Link>
-          </div>
-
-          {/* Edit Profile */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-[#32a86d] rounded-full flex items-center justify-center text-white font-bold text-lg">
-                ⚙️
-              </div>
-              <h3 className="text-lg font-semibold ml-3 text-[#32a86d]">Edit Profile</h3>
-            </div>
-            <p className="text-gray-600 mb-4">Update your bio, skills, location, and resume.</p>
-            <Link to="/edit-profile">
-              <button className="w-full bg-[#32a86d] text-white py-2 px-4 rounded hover:bg-[#2c915d] transition">
-                Edit Profile
-              </button>
-            </Link>
-          </div>
-        </div>
+        {/* Removed quick action boxes for Create Post, Upload Profile Picture, Add New Project, Edit Profile as per request */}
 
         {/* Posts Feed Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">

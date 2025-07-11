@@ -70,6 +70,9 @@ public class UserServiceImp implements UserService {
     public void updateProfile(Long id, UserProfileDTO dto) {
         Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
 
+        if (dto.getUsername() != null && !dto.getUsername().isEmpty()) {
+            user.setUsername(dto.getUsername());
+        }
         user.setBio(dto.getBio());
         user.setLocation(dto.getLocation());
         user.setProfilePicUrl(dto.getProfilePicUrl());

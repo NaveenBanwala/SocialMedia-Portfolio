@@ -73,10 +73,13 @@ public class ProjectsServiceImp implements ProjectService {
     }
     private ProjectDTO toDto(Projects p) {
         String username = null;
+        Long userId = null;
         if (p.getUser() != null && p.getUser().getUsername() != null && !p.getUser().getUsername().trim().isEmpty()) {
             username = p.getUser().getUsername();
+            userId = p.getUser().getId();
         } else {
             username = "Unknown";
+            userId = null;
         }
         System.out.println("Project " + p.getId() + " user: " + (p.getUser() != null ? p.getUser().getId() : "null") + " username: " + username);
         return ProjectDTO.builder()
@@ -86,6 +89,7 @@ public class ProjectsServiceImp implements ProjectService {
                 .imageUrl(p.getImageUrl())
                 .likeCount(p.getLikes() != null ? p.getLikes().size() : 0)
                 .username(username)
+                .userId(userId)
                 .build();
     }
 }

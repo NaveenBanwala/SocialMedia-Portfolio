@@ -3,7 +3,6 @@ import Home from './pages/Home';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Profile from './pages/Profile.jsx';
-import EditProfile from './pages/EditProfile.jsx'; 
 import ProjectDetails from './pages/ProjectDetails';
 import AddProjectPage from './pages/AddProjectPage.jsx';
 import CreatePost from './pages/CreatePost.jsx';
@@ -13,6 +12,8 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
 import SearchUserPage from './pages/SearchUserPage.jsx';
 import Inbox from './pages/Inbox.jsx';
+import EditProfile from './pages/EditProfile.jsx';
+import EditProjectPage from './pages/EditProjectPage.jsx';
 import { AuthProvider, useAuth } from './Api/AuthContext.jsx';
 
 const AppRoutes = () => {
@@ -46,10 +47,6 @@ const AppRoutes = () => {
             element={isAuthenticated ? <Profile /> : <Navigate to="/login" />}
         />
         <Route
-            path="/edit-profile"
-            element={isAuthenticated ? <EditProfile /> : <Navigate to="/login" />}
-        />
-        <Route
             path="/add-project"
             element={isAuthenticated ? <AddProjectPage /> : <Navigate to="/login" />}
         />
@@ -68,6 +65,14 @@ const AppRoutes = () => {
         <Route
             path="/inbox"
             element={isAuthenticated ? <Inbox /> : <Navigate to="/login" />}
+        />
+        <Route
+            path="/edit-profile"
+            element={isAuthenticated ? <EditProfile /> : <Navigate to="/login" />}
+        />
+        <Route
+            path="/edit-project/:id"
+            element={isAuthenticated ? <EditProjectPage /> : <Navigate to="/login" />}
         />
 
         {/* 404 fallback */}

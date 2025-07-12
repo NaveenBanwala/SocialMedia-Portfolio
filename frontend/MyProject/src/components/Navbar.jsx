@@ -2,9 +2,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../Api/AuthContext.jsx';
 import api from '../Api/api.jsx';
+import SideBar from './SideBar.jsx';
 
 function Navbar() {
-  const { isAuthenticated, logout, isAdmin, user } = useAuth();
+  const { isAuthenticated, isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [notifCount, setNotifCount] = useState(0);
 
@@ -14,7 +15,8 @@ function Navbar() {
         try {
           const res = await api.get(`/users/${user.id}/notifications`);
           // Count only unread notifications
-          setNotifCount(res.data.filter(n => !n.read).length);
+          setNotifCount(res.data.filter(n => 
+            !n.read).length);
         } catch (err) {
           setNotifCount(0);
         }
@@ -22,11 +24,6 @@ function Navbar() {
     };
     fetchNotifications();
   }, [user]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   // Helper function to construct full image URL
   const getImageUrl = (imagePath) => {
@@ -72,7 +69,7 @@ function Navbar() {
           ) : null}
           <DefaultProfileImage 
             username={user?.username} 
-            style={{ display: hasValidProfilePic ? 'none' : 'flex' }}
+            style={{ display : hasValidProfilePic ? 'none' : 'flex' }}
           />
         </Link>
 
@@ -122,17 +119,13 @@ function Navbar() {
         </Link>
       </div>
 
+    {/*Setting Option */}
+    <SideBar/>
+
       {/* Right: Login/Register or Logout */}
       <div className="flex gap-4 items-center">
         {isAuthenticated ? (
-          <>
-            <button
-              onClick={handleLogout}
-              className="bg-white text-[#32a86d] font-semibold px-4 py-2 rounded hover:bg-gray-200 hover:border hover:border-[#32a86d] hover:rounded-lg transition"
-            >
-              LogOut
-            </button>
-          </>
+          null
         ) : (
           <>
             <Link to="/login">

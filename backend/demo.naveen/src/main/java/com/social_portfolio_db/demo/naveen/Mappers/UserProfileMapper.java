@@ -61,7 +61,7 @@ public class UserProfileMapper {
         }
 
         // Set followers and following counts
-        dto.setFollowersCount(user.getFollowers() != null ? user.getFollowers().size() : 0);
+        dto.setFollowersCount(user.getFollowing() != null ? user.getFollowing().size() : 0);
         dto.setFollowingCount(user.getFollowing() != null ? user.getFollowing().size() : 0);
 
         return dto;

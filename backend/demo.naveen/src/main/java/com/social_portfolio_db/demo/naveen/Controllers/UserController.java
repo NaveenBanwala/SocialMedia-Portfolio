@@ -170,7 +170,7 @@ public class UserController {
 
     @DeleteMapping("/users/{id}/profile-picture")
     public ResponseEntity<String> removeProfilePicture(@PathVariable Long id,
-                                                      @AuthenticationPrincipal UserDetails userDetails) {
+                                                    @AuthenticationPrincipal UserDetails userDetails) {
         try {
             Users user = userRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -329,8 +329,8 @@ public class UserController {
         Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         Users follower = userRepo.findById(followerId).orElseThrow(() -> new RuntimeException("Follower not found"));
         System.out.println("Attempting to follow: user=" + user.getId() + ", follower=" + follower.getId());
-        if (!user.getFollowers().contains(follower)) {
-            user.getFollowers().add(follower);
+        if (!user.getFollowing().contains(follower)) {
+            user.getFollowing().add(follower);
             follower.getFollowing().add(user);
             userRepo.save(user);
             userRepo.save(follower);
@@ -355,8 +355,8 @@ public class UserController {
     public ResponseEntity<?> unfollowUser(@PathVariable Long id, @RequestParam Long followerId) {
         Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         Users follower = userRepo.findById(followerId).orElseThrow(() -> new RuntimeException("Follower not found"));
-        if (user.getFollowers().contains(follower)) {
-            user.getFollowers().remove(follower);
+        if (user.getFollowing().contains(follower)) {
+            user.getFollowing().remove(follower);
             follower.getFollowing().remove(user);
             userRepo.save(user);
             userRepo.save(follower);
@@ -367,7 +367,11 @@ public class UserController {
     @GetMapping("/users/{id}/followers")
     public ResponseEntity<?> getFollowers(@PathVariable Long id) {
         Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(user.getFollowers());
+        // Find all users whose 'following' set contains this user
+        List<Users> followers = userRepo.findAll().stream()
+            .filter(u -> u.getFollowing().contains(user))
+            .toList();
+        return ResponseEntity.ok(followers);
     }
 
     @GetMapping("/users/{id}/following")
@@ -417,7 +421,7 @@ public class UserController {
     public ResponseEntity<?> getMostFollowedUsers() {
         List<Users> users = userRepo.findTop10UsersByFollowers();
         List<Object> result = users.stream().map(u -> {
-            int followerCount = u.getFollowers() != null ? u.getFollowers().size() : 0;
+            int followerCount = u.getFollowing() != null ? u.getFollowing().size() : 0;
             return java.util.Map.of(
                 "userId", u.getId(),
                 "username", u.getUsername(),
@@ -426,5 +430,8 @@ public class UserController {
         }).collect(Collectors.toList());
         return ResponseEntity.ok(result);
     }
+
+
+    // Removed duplicate getFollowers method to resolve compilation error
 
 }

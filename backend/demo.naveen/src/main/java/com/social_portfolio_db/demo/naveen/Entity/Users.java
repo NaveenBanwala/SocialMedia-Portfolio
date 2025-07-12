@@ -110,21 +110,15 @@ public class Users {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Set<Post> likedPosts = new HashSet<>();
 
-    // Followers and following
     @ManyToMany
     @JoinTable(
-        name = "user_followers",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "follower_id")
+        name = "follows",
+        joinColumns = @JoinColumn(name = "follower_id"),
+        inverseJoinColumns = @JoinColumn(name = "following_id")
     )
     @Builder.Default
-    @com.fasterxml.jackson.annotation.JsonIgnore
-    private Set<Users> followers = new HashSet<>();
-
-    @ManyToMany(mappedBy = "followers")
-    @Builder.Default
-    @com.fasterxml.jackson.annotation.JsonIgnore
     private Set<Users> following = new HashSet<>();
+
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

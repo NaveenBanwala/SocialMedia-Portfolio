@@ -15,12 +15,13 @@ import Inbox from './pages/Inbox.jsx';
 import EditProfile from './pages/EditProfile.jsx';
 import EditProjectPage from './pages/EditProjectPage.jsx';
 import { AuthProvider, useAuth } from './Api/AuthContext.jsx';
+import ManageFriendsPage from './pages/ManageFriendsPage.jsx';
 
 const AppRoutes = () => {
     const { isAuthenticated } = useAuth();
     return (
         <>
-        <Navbar />
+        {isAuthenticated ? <Navbar /> : null}
         <Routes>
         {/* Public */}
         <Route path="/" element={<Home />} />
@@ -74,6 +75,11 @@ const AppRoutes = () => {
             path="/edit-project/:id"
             element={isAuthenticated ? <EditProjectPage /> : <Navigate to="/login" />}
         />
+
+        <Route
+        path="/manage-friends"
+        element={isAuthenticated ? <ManageFriendsPage /> : <Navigate to="/login"/>}
+        ></Route>
 
         {/* 404 fallback */}
         <Route path="*" element={<h1>404 Not Found</h1>} />

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import  { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../Api/api'; 
 
 const Register = () => {
@@ -39,15 +39,15 @@ const Register = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-[#32a86d]">
+    <div className="flex justify-center items-center min-h-screen bg-yellow-100 shadow-2xl shadow-inner "> 
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center text-[#32a86d]">Register</h2>
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleRegister} className="space-y-6">
           <input
             type="text"
             name="username"
             placeholder="Username"
-            className="w-full px-4 py-2 border rounded focus:outline-none"
+            className="w-full px-4 py-2 border rounded focus:outline-none mb-2"
             value={formData.username}
             onChange={handleChange}
             required
@@ -56,7 +56,7 @@ const Register = () => {
             type="email"
             name="email"
             placeholder="Email"
-            className="w-full px-4 py-2 border rounded focus:outline-none"
+            className="w-full px-4 py-2 border rounded focus:outline-none mb-2"
             value={formData.email}
             onChange={handleChange}
             required
@@ -65,7 +65,7 @@ const Register = () => {
             type="password"
             name="password"
             placeholder="Password"
-            className="w-full px-4 py-2 border rounded focus:outline-none"
+            className="w-full px-4 py-2 border rounded focus:outline-none mb-2"
             value={formData.password}
             onChange={handleChange}
             required
@@ -77,6 +77,14 @@ const Register = () => {
             Register
           </button>
         </form>
+          <div className="mt-4 text-center">
+        <p >Do you have an account?{' '} 
+        <button  className="text-[#32a86d] hover:underline" onClick={() => navigate('/login')}>
+          
+          Login here
+        </button>
+        </p>
+        </div>
       </div>
     </div>
   );

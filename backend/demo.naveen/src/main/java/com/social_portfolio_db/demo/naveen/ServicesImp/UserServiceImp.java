@@ -139,4 +139,21 @@ public List<UserProfileDTO> searchUsersByParams(String name, String skill, Strin
     return users.stream().map(UserProfileMapper::toDto).toList();
 }
 
+public List<Users> getFollowers(Long userId){
+    Set<Users> followersSet = userRepo.findFollowersOfUser(userId);
+    if (followersSet == null) {
+        throw new RuntimeException("User not found with id: " + userId);
+    }
+    return new java.util.ArrayList<>(followersSet);
+}
+
+public List<Users> getFollowing(Long userId) {
+    Set<Users> followingSet = userRepo.findFollowings(userId);
+    if (followingSet == null) {
+        throw new RuntimeException("User not found with id: " + userId);
+    }
+    return new java.util.ArrayList<>(followingSet);
+
+}
+
 }

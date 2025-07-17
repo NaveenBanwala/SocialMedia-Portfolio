@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../Api/api.jsx';
 
 const SearchUserPage = () => {
@@ -7,6 +7,8 @@ const SearchUserPage = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Add state for image error for each user
+  const [imgErrors, setImgErrors] = useState({});
 
   // Helper function to construct full image URL
   const getImageUrl = (imagePath) => {
@@ -31,27 +33,34 @@ const SearchUserPage = () => {
     </div>
   );
 
-  // Handle search form submit
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const res = await api.get(`/search?name=${encodeURIComponent(query)}`); // Use 'name' param for backend
-      setResults(res.data);
-    } catch (err) {
-      setError('Error searching users.');
+  // Real-time search as user types (debounced)
+  useEffect(() => {
+    if (!query) {
       setResults([]);
-    } finally {
-      setLoading(false);
+      setError('');
+      return;
     }
-  };
+    const delayDebounce = setTimeout(async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await api.get(`/search?name=${encodeURIComponent(query)}`);
+        setResults(res.data);
+      } catch (err) {
+        setError('Error searching users.');
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 400); // 400ms debounce
+    return () => clearTimeout(delayDebounce);
+  }, [query]);
 
   return (
     <div className="p-6 min-h-screen bg-white">
       <h1 className="text-2xl font-bold mb-4 text-[#32a86d] border-b-2 border-[#32a86d] pb-2">Search Users</h1>
       {/* Search form */}
-      <form onSubmit={handleSearch} className="mb-6 flex gap-2">
+      <div className="mb-6 flex gap-2">
         <input
           type="text"
           value={query}
@@ -59,14 +68,7 @@ const SearchUserPage = () => {
           placeholder="Enter username or email..."
           className="border-2 border-[#32a86d] rounded px-4 py-2 w-full focus:outline-none"
         />
-        <button
-          type="submit"
-          className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] font-semibold"
-          disabled={loading}
-        >
-          {loading ? 'Searching...' : 'Search'}
-        </button>
-      </form>
+      </div>
       {/* Error message */}
       {error && <div className="text-red-500 mb-4">{error}</div>}
       {/* Results */}
@@ -74,18 +76,14 @@ const SearchUserPage = () => {
         {results.map(user => (
           <div key={user.id} className="border-2 border-[#32a86d] rounded-xl p-4 bg-white flex items-center gap-4">
             <div className="relative">
-              {hasValidProfilePic(user.profilePicUrl) ? (
+              {hasValidProfilePic(user.profilePicUrl) && !imgErrors[user.id] ? (
                 <img
                   src={getImageUrl(user.profilePicUrl)}
                   alt="Profile"
                   className="w-16 h-16 rounded-full object-cover border-2 border-[#32a86d]"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
+                  onError={() => setImgErrors(prev => ({ ...prev, [user.id]: true }))}
                 />
-              ) : null}
-              {!hasValidProfilePic(user.profilePicUrl) && (
+              ) : (
                 <DefaultProfileImage username={user.username || user.name} />
               )}
             </div>

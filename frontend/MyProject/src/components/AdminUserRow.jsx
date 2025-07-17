@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const AdminUserRow = ({ user, onDelete, onUpdateUser, onRemoveProfilePic }) => {
   // Helper function to construct full image URL
@@ -23,23 +23,21 @@ const AdminUserRow = ({ user, onDelete, onUpdateUser, onRemoveProfilePic }) => {
     </div>
   );
 
+  const [imgError, setImgError] = useState(false); // Track image load error
+
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50">
       <td className="border p-2">
         <div className="flex items-center gap-3">
           <div className="relative">
-            {hasValidProfilePic(user.profilePicUrl) ? (
+            {hasValidProfilePic(user.profilePicUrl) && !imgError ? (
               <img
                 src={getImageUrl(user.profilePicUrl)}
                 alt="Profile"
                 className="w-10 h-10 rounded-full object-cover border-2 border-[#32a86d]"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
+                onError={() => setImgError(true)}
               />
-            ) : null}
-            {!hasValidProfilePic(user.profilePicUrl) && (
+            ) : (
               <DefaultProfileImage username={user.username || user.name} />
             )}
           </div>

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.social_portfolio_db.demo.naveen.Entity.Users;
+import com.social_portfolio_db.demo.naveen.Entity.FriendRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -41,12 +42,12 @@ public interface UserJpa extends JpaRepository<Users, Long> {
     @Query("SELECT u FROM Users u LEFT JOIN FETCH u.skills WHERE u.id = :id")
     Optional<Users> findByIdWithSkills(@Param("id") Long id);
 
-    // 1️⃣ Get all users this user is following
-    @Query("SELECT u.following FROM Users u WHERE u.id = :userId")
+    // 1️⃣ Get all users this user is following (from friend_requests table with ACCEPTED status)
+    @Query("SELECT DISTINCT fr.toUser FROM FriendRequest fr WHERE fr.fromUser.id = :userId AND fr.status = 'ACCEPTED'")
     Set<Users> findFollowings(@Param("userId") Long userId);
 
-    // 2️⃣ Get all followers of a user
-    @Query("SELECT u FROM Users u JOIN u.following f WHERE f.id = :userId")
+    // 2️⃣ Get all followers of a user (from friend_requests table with ACCEPTED status)
+    @Query("SELECT DISTINCT fr.fromUser FROM FriendRequest fr WHERE fr.toUser.id = :userId AND fr.status = 'ACCEPTED'")
     Set<Users> findFollowersOfUser(@Param("userId") Long userId);
 
 

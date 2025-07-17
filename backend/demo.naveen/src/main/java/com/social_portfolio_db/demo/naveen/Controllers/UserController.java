@@ -6,6 +6,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.ArrayList;
+import java.util.Optional;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
@@ -30,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.data.domain.PageRequest;
 
 import com.social_portfolio_db.demo.naveen.Dtos.UserProfileDTO;
 import com.social_portfolio_db.demo.naveen.ServicesImp.UserServiceImp;
@@ -59,6 +63,41 @@ public class UserController {
         return ResponseEntity.ok("Backend is working! UserController is accessible.");
     }
 
+    @GetMapping("/test-follows")
+    public ResponseEntity<?> testFollows() {
+        try {
+            // Get all users
+            List<Users> allUsers = userRepo.findAll();
+            System.out.println("Total users in database: " + allUsers.size());
+            
+            // Check each user's following relationships from friend_requests table
+            for (Users user : allUsers) {
+                Set<Users> following = userRepo.findFollowings(user.getId());
+                Set<Users> followers = userRepo.findFollowersOfUser(user.getId());
+                System.out.println("User " + user.getId() + " (" + user.getUsername() + ") following: " + following.size() + ", followers: " + followers.size());
+                if (!following.isEmpty()) {
+                    System.out.println("  Following: " + following.stream().map(u -> u.getUsername() + "(" + u.getId() + ")").collect(Collectors.joining(", ")));
+                }
+                if (!followers.isEmpty()) {
+                    System.out.println("  Followers: " + followers.stream().map(u -> u.getUsername() + "(" + u.getId() + ")").collect(Collectors.joining(", ")));
+                }
+            }
+            
+            // Check all friend requests
+            List<FriendRequest> allRequests = friendRequestRepo.findAll();
+            System.out.println("Total friend requests in database: " + allRequests.size());
+            for (FriendRequest request : allRequests) {
+                System.out.println("Friend Request: " + request.getFromUser().getUsername() + " -> " + request.getToUser().getUsername() + " (Status: " + request.getStatus() + ")");
+            }
+            
+            return ResponseEntity.ok("Follow relationships checked. Check console for details.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error testing follows: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/users/{id}")
         public ResponseEntity<UserProfileDTO> getProfile(@PathVariable Long id) {
         UserProfileDTO profile = userServiceImp.getUserProfile(id);
@@ -84,7 +123,7 @@ public class UserController {
 
 // Removed duplicate getProfile method to resolve compilation error
 
-    @PutMapping("/{id}")
+    @PutMapping("/users/{id}")
     public ResponseEntity<String> updateProfile(@PathVariable Long id, @RequestBody UserProfileDTO dto) {
         userServiceImp.updateProfile(id, dto);
         return ResponseEntity.ok("Profile updated successfully");
@@ -139,7 +178,7 @@ public class UserController {
 
     @DeleteMapping("/users/{id}/resume")
     public ResponseEntity<String> removeResume(@PathVariable Long id,
-                                             @AuthenticationPrincipal UserDetails userDetails) {
+                                            @AuthenticationPrincipal UserDetails userDetails) {
         try {
             Users user = userRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -208,6 +247,8 @@ public class UserController {
                 filePath = Paths.get("uploads/projects/" + filename);
             } else if ("resumes".equals(type)) {
                 filePath = Paths.get("uploads/resumes/" + filename);
+            } else if ("dashboard".equals(type)) {
+                filePath = Paths.get("uploads/dashboard/" + filename);
             } else {
                 filePath = Paths.get("uploads/" + filename);
             }
@@ -219,6 +260,7 @@ public class UserController {
                 return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173")
                     .body(resource);
             } else {
                 return ResponseEntity.notFound().build();
@@ -329,61 +371,150 @@ public class UserController {
         Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         Users follower = userRepo.findById(followerId).orElseThrow(() -> new RuntimeException("Follower not found"));
         System.out.println("Attempting to follow: user=" + user.getId() + ", follower=" + follower.getId());
-        if (!user.getFollowing().contains(follower)) {
-            user.getFollowing().add(follower);
-            follower.getFollowing().add(user);
-            userRepo.save(user);
-            userRepo.save(follower);
-            // Notification
-            if (!Objects.equals(follower.getId(), user.getId())) {
-                System.out.println("Creating follow notification for user: " + user.getId());
-                Notification notif = Notification.builder()
-                    .user(user)
-                    .message(follower.getUsername() + " started following you.")
-                    .type("FOLLOW")
-                    .createdAt(LocalDateTime.now())
-                    .read(false)
-                    .build();
-                notificationRepo.save(notif);
-                System.out.println("Notification saved for user: " + user.getId());
+        
+        // Check if friend request already exists
+        Optional<FriendRequest> existingRequest = friendRequestRepo.findByFromUserAndToUser(follower, user);
+        
+        if (existingRequest.isPresent()) {
+            FriendRequest request = existingRequest.get();
+            if ("ACCEPTED".equals(request.getStatus())) {
+                System.out.println("User is already following this user");
+                return ResponseEntity.ok("Already following");
+            } else if ("PENDING".equals(request.getStatus())) {
+                // Accept the pending request
+                request.setStatus("ACCEPTED");
+                friendRequestRepo.save(request);
+                System.out.println("Accepted pending friend request");
             }
+        } else {
+            // Create new friend request with ACCEPTED status (direct follow)
+            FriendRequest request = FriendRequest.builder()
+                .fromUser(follower)
+                .toUser(user)
+                .status("ACCEPTED")
+                .createdAt(LocalDateTime.now())
+                .build();
+            friendRequestRepo.save(request);
+            System.out.println("Created new follow relationship");
         }
+        
+        // Notification
+        if (!Objects.equals(follower.getId(), user.getId())) {
+            System.out.println("Creating follow notification for user: " + user.getId());
+            Notification notif = Notification.builder()
+                .user(user)
+                .message(follower.getUsername() + " started following you.")
+                .type("FOLLOW")
+                .createdAt(LocalDateTime.now())
+                .read(false)
+                .build();
+            notificationRepo.save(notif);
+            System.out.println("Notification saved for user: " + user.getId());
+        }
+        
         return ResponseEntity.ok("Followed user");
     }
 
-    @PostMapping("/users/{id}/unfollow")
-    public ResponseEntity<?> unfollowUser(@PathVariable Long id, @RequestParam Long followerId) {
-        Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        Users follower = userRepo.findById(followerId).orElseThrow(() -> new RuntimeException("Follower not found"));
-        if (user.getFollowing().contains(follower)) {
-            user.getFollowing().remove(follower);
-            follower.getFollowing().remove(user);
-            userRepo.save(user);
-            userRepo.save(follower);
+    @DeleteMapping("/users/{id}/unfollow")
+    public ResponseEntity<?> unfollowUser(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            if (userDetails == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("You must be logged in to unfollow a user.");
+            }
+            Users currentUser = userRepo.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Current user not found"));
+            Users targetUser = userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Target user not found"));
+
+            Optional<FriendRequest> request = friendRequestRepo.findByFromUserAndToUser(currentUser, targetUser);
+            if (request.isPresent() && "ACCEPTED".equals(request.get().getStatus())) {
+                friendRequestRepo.delete(request.get());
+                return ResponseEntity.ok("Unfollowed user successfully");
+            } else if (request.isPresent()) {
+                return ResponseEntity.badRequest().body("You have not followed this user yet (status: " + request.get().getStatus() + ")");
+            } else {
+                return ResponseEntity.badRequest().body("You are not following this user (no follow relationship found)");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error unfollowing user: " + e.getMessage());
         }
-        return ResponseEntity.ok("Unfollowed user");
+    }
+
+    @DeleteMapping("/users/{id}/remove-follower")
+    public ResponseEntity<?> removeFollower(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            if (userDetails == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("You must be logged in to remove a follower.");
+            }
+            Users currentUser = userRepo.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Current user not found"));
+            Users followerUser = userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Follower user not found"));
+
+            // Find the friend request where followerUser is following currentUser
+            Optional<FriendRequest> request = friendRequestRepo.findByFromUserAndToUser(followerUser, currentUser);
+            if (request.isPresent() && "ACCEPTED".equals(request.get().getStatus())) {
+                friendRequestRepo.delete(request.get());
+                return ResponseEntity.ok("Follower removed successfully");
+            } else if (request.isPresent()) {
+                return ResponseEntity.badRequest().body("This user is not following you yet (status: " + request.get().getStatus() + ")");
+            } else {
+                return ResponseEntity.badRequest().body("This user is not following you (no follow relationship found)");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error removing follower: " + e.getMessage());
+        }
     }
 
     @GetMapping("/users/{id}/followers")
     public ResponseEntity<?> getFollowers(@PathVariable Long id) {
-        Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        // Find all users whose 'following' set contains this user
-        List<Users> followers = userRepo.findAll().stream()
-            .filter(u -> u.getFollowing().contains(user))
-            .toList();
-        return ResponseEntity.ok(followers);
+        try {
+            // Use the proper repository method instead of loading all users
+            Set<Users> followers = userRepo.findFollowersOfUser(id);
+            System.out.println("Followers for user " + id + ": " + followers.size());
+            if (followers.isEmpty()) {
+                System.out.println("No followers found for user " + id);
+            } else {
+                System.out.println("Followers: " + followers.stream().map(u -> u.getUsername() + "(" + u.getId() + ")").collect(Collectors.joining(", ")));
+            }
+            return ResponseEntity.ok(new ArrayList<>(followers));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error fetching followers: " + e.getMessage());
+        }
     }
 
     @GetMapping("/users/{id}/following")
     public ResponseEntity<?> getFollowing(@PathVariable Long id) {
-        Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(user.getFollowing());
+        try {
+            // Use the proper repository method
+            Set<Users> following = userRepo.findFollowings(id);
+            System.out.println("Following for user " + id + ": " + following.size());
+            if (following.isEmpty()) {
+                System.out.println("User " + id + " is not following anyone");
+            } else {
+                System.out.println("Following: " + following.stream().map(u -> u.getUsername() + "(" + u.getId() + ")").collect(Collectors.joining(", ")));
+            }
+            return ResponseEntity.ok(new ArrayList<>(following));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error fetching following: " + e.getMessage());
+        }
     }
 
     @GetMapping("/users/{id}/notifications")
     public ResponseEntity<?> getNotifications(@PathVariable Long id) {
         Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(notificationRepo.findByUserOrderByCreatedAtDesc(user));
+        // Return only the latest 15 notifications
+        return ResponseEntity.ok(notificationRepo.findByUserOrderByCreatedAtDesc(user, PageRequest.of(0, 15)));
     }
 
     @PatchMapping("/notifications/{id}/read")
@@ -416,22 +547,76 @@ public class UserController {
         }
     }
 
+    @DeleteMapping("/users/{id}/cancel-friend-request")
+    public ResponseEntity<?> cancelFriendRequest(@PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+        try {
+            if (userDetails == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("You must be logged in to cancel a friend request.");
+            }
+            Users currentUser = userRepo.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Current user not found"));
+            Users targetUser = userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Target user not found"));
+
+            Optional<FriendRequest> request = friendRequestRepo.findByFromUserAndToUser(currentUser, targetUser);
+            if (request.isPresent() && "PENDING".equals(request.get().getStatus())) {
+                friendRequestRepo.delete(request.get());
+                return ResponseEntity.ok("Friend request cancelled successfully");
+            } else if (request.isPresent()) {
+                return ResponseEntity.badRequest().body("Friend request is not pending (status: " + request.get().getStatus() + ")");
+            } else {
+                return ResponseEntity.badRequest().body("No pending friend request found to cancel");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error cancelling friend request: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/admin/most-followed-users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getMostFollowedUsers() {
-        List<Users> users = userRepo.findTop10UsersByFollowers();
+        List<Users> users = userRepo.findAll();
         List<Object> result = users.stream().map(u -> {
-            int followerCount = u.getFollowing() != null ? u.getFollowing().size() : 0;
+            int followerCount = 0;
+            try {
+                followerCount = userRepo.findFollowersOfUser(u.getId()).size();
+            } catch (Exception e) {
+                followerCount = 0;
+            }
             return java.util.Map.of(
                 "userId", u.getId(),
                 "username", u.getUsername(),
                 "followerCount", followerCount
             );
-        }).collect(Collectors.toList());
+        }).sorted((a, b) -> Integer.compare((int) b.get("followerCount"), (int) a.get("followerCount")))
+        .limit(10)
+        .collect(Collectors.toList());
         return ResponseEntity.ok(result);
     }
 
-
-    // Removed duplicate getFollowers method to resolve compilation error
-
+    @GetMapping("/users/{id}/following-with-status")
+    public ResponseEntity<?> getFollowingWithStatus(@PathVariable Long id) {
+        try {
+            Users currentUser = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+            List<FriendRequest> requests = friendRequestRepo.findByFromUser(currentUser);
+            List<Object> result = requests.stream().map(req -> {
+                Users toUser = req.getToUser();
+                return java.util.Map.of(
+                    "id", toUser.getId(),
+                    "username", toUser.getUsername(),
+                    "email", toUser.getEmail(),
+                    "status", req.getStatus()
+                );
+            }).collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error fetching following with status: " + e.getMessage());
+        }
+    }
+    
 }

@@ -15,6 +15,7 @@ const UserCard = ({ user }) => {
   const [profileLikeCount, setProfileLikeCount] = useState(0);
   const [friendStatus, setFriendStatus] = useState(null);
   const [friendLoading, setFriendLoading] = useState(false);
+  const [imgError, setImgError] = useState(false); // Track image load error
 
   useEffect(() => {
     const fetchFollowers = async () => {
@@ -135,14 +136,16 @@ const UserCard = ({ user }) => {
 
   return (
     <div className="border rounded-xl p-4 shadow-md bg-white">
-      <img 
-        src={getImageUrl(user.profilePic || user.profilePicUrl)} 
-        alt="Profile" 
-        className="w-16 h-16 rounded-full object-cover"
-        onError={(e) => {
-          e.target.src = '/default-profile.png';
-        }}
-      />
+      {user.profilePicUrl && getImageUrl(user.profilePicUrl) && !imgError ? (
+        <img 
+          src={getImageUrl(user.profilePicUrl)} 
+          alt="Profile" 
+          className="w-16 h-16 rounded-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <DefaultProfileImage username={user.username} />
+      )}
       <h3 className="mt-2 font-semibold">{user.username}</h3>
       <p className="text-gray-500">{user.email}</p>
       <div className="flex items-center gap-2 mt-2">

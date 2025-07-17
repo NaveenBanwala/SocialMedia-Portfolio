@@ -4,26 +4,31 @@ import com.social_portfolio_db.demo.naveen.Dtos.UserProfileDTO;
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectDTO;
 import com.social_portfolio_db.demo.naveen.Entity.Users;
 import com.social_portfolio_db.demo.naveen.Entity.Skills;
+import com.social_portfolio_db.demo.naveen.Jpa.UserJpa;
 
 import java.util.stream.Collectors;
 import java.util.Collections;
 
 public class UserProfileMapper {
-    public static UserProfileDTO toDto(Users user) {
+    public static UserProfileDTO toDto(Users user, UserJpa userRepo) {
         UserProfileDTO dto = new UserProfileDTO();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setBio(user.getBio());
         dto.setLocation(user.getLocation());
-        dto.setProfilePicUrl(user.getProfilePicUrl());
+        // Always set a valid profilePicUrl
+        if (user.getProfilePicUrl() == null || user.getProfilePicUrl().trim().isEmpty()) {
+            dto.setProfilePicUrl("/images/profiles/default-profile.png");
+        } else {
+            dto.setProfilePicUrl(user.getProfilePicUrl());
+        }
         dto.setResumeUrl(user.getResumeUrl());
 
         // Handle skills with null safety
         if (user.getSkills() != null && !user.getSkills().isEmpty()) {
             dto.setSkills(
                 user.getSkills().stream()
-                    .map(Skills::getSkillName)
-                    .filter(skillName -> skillName != null && !skillName.trim().isEmpty())
+                    .map(skill -> new UserProfileDTO.SkillDTO(skill.getSkillName(), skill.getLevel()))
                     .collect(Collectors.toList())
             );
         } else {
@@ -60,9 +65,18 @@ public class UserProfileMapper {
             dto.setRoles(Collections.emptyList());
         }
 
-        // Set followers and following counts
-        dto.setFollowersCount(user.getFollowing() != null ? user.getFollowing().size() : 0);
-        dto.setFollowingCount(user.getFollowing() != null ? user.getFollowing().size() : 0);
+        // Set followers and following counts (from friend_requests table)
+        int followersCount = 0;
+        int followingCount = 0;
+        try {
+            followersCount = userRepo.findFollowersOfUser(user.getId()).size();
+            followingCount = userRepo.findFollowings(user.getId()).size();
+        } catch (Exception e) {
+            followersCount = 0;
+            followingCount = 0;
+        }
+        dto.setFollowersCount(followersCount);
+        dto.setFollowingCount(followingCount);
 
         return dto;
     }

@@ -21,7 +21,12 @@ export const AuthProvider = ({ children }) => {
         try {
           // Assume /users/me returns user info including roles
           const res = await api.get('/users/me');
-          setUser(res.data);
+          // Normalize profilePic/profilePicUrl
+          let userData = res.data;
+          if (!userData.profilePicUrl && userData.profilePic) {
+            userData.profilePicUrl = userData.profilePic;
+          }
+          setUser(userData);
         } catch {
           setUser(null);
         }

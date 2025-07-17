@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../Api/api.jsx';
 import { useAuth } from '../Api/AuthContext.jsx';
+import PostCard from '../components/PostCard';
+import { useState as useReactState } from 'react';
 
 const Profile = () => {
   const { id } = useParams(); // 'me' or user id
@@ -22,6 +24,28 @@ const Profile = () => {
   const [projectLikes, setProjectLikes] = useState({}); // { [projectId]: { liked: bool, count: number } }
   const [friendStatus, setFriendStatus] = useState(null);
   const [friendLoading, setFriendLoading] = useState(false);
+  const [skillLevels, setSkillLevels] = useReactState(() => {
+    if (user && user.skills) {
+      // Default all to 'Easy'
+      return Object.fromEntries(user.skills.map(skill => [getSkillName(skill), 'Basic']));
+    }
+    return {};
+  });
+  const levelOrder = ['Basic', 'Moderate', 'Professional'];
+  const levelColors = {
+    Basic: 'bg-green-200 text-green-800',
+    Moderate: 'bg-yellow-200 text-yellow-800',
+    Professional: 'bg-blue-200 text-blue-800',
+  };
+  const handleLevelChange = (skillName) => {
+    setSkillLevels(prev => {
+      const current = prev[skillName] || 'Basic';
+      const idx = levelOrder.indexOf(current);
+      const next = levelOrder[(idx + 1) % levelOrder.length];
+      return { ...prev, [skillName]: next };
+    });
+  };
+  const [imgError, setImgError] = useState(false); // Track image load error
 
   // Default profile image component
   const DefaultProfileImage = ({ username, size = "w-24 h-24" }) => (
@@ -117,11 +141,17 @@ const Profile = () => {
   // Add skill function
   const addSkill = async () => {
     if (!newSkill.trim()) return;
-    
     try {
       await api.put(`/${user.id}`, {
-        ...user,
-        skills: [...(user.skills || []), newSkill.trim()]
+        id: user.id,
+        username: user.username,
+        bio: user.bio,
+        location: user.location,
+        profilePicUrl: user.profilePicUrl,
+        resumeUrl: user.resumeUrl,
+        skills: [...(user.skills || []), newSkill.trim()],
+        projects: user.projects || [],
+        roles: user.roles || [],
       });
       setNewSkill('');
       setShowSkillInput(false);
@@ -137,19 +167,23 @@ const Profile = () => {
     if (!window.confirm(`Are you sure you want to remove the skill "${skillToRemove}"?`)) {
       return;
     }
-
     try {
       const updatedSkills = user.skills.filter(skill => {
         const skillName = typeof skill === 'string' ? skill : 
                         (skill.skillName || skill.name || String(skill));
         return skillName !== skillToRemove;
       });
-
       await api.put(`/${user.id}`, {
-        ...user,
-        skills: updatedSkills
+        id: user.id,
+        username: user.username,
+        bio: user.bio,
+        location: user.location,
+        profilePicUrl: user.profilePicUrl,
+        resumeUrl: user.resumeUrl,
+        skills: updatedSkills,
+        projects: user.projects || [],
+        roles: user.roles || [],
       });
-      
       window.location.reload();
     } catch (error) {
       console.error('Error removing skill:', error);
@@ -242,17 +276,14 @@ const Profile = () => {
   const fetchUserPosts = async (userId) => {
     setLoadingPosts(true);
     try {
-      console.log('Fetching posts for user ID:', userId);
-      // Use /posts/me endpoint instead of /posts/user/{userId} to avoid the 500 error
-      const response = await api.get('/posts/me');
-      console.log('Posts API response:', response);
+      let response;
+      if (id === 'me' || (currentUser && userId === currentUser.id)) {
+        response = await api.get('/posts/me');
+      } else {
+        response = await api.get(`/posts/user/${userId}`);
+      }
       setUserPosts(response.data);
-      console.log('User posts fetched successfully:', response.data);
-      console.log('Fetched user posts:', response.data);
     } catch (error) {
-      console.error('Error fetching user posts:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
       setUserPosts([]);
     } finally {
       setLoadingPosts(false);
@@ -314,7 +345,12 @@ const Profile = () => {
         
         // If we came from EditProfile and have updated user info, use it
         setUser(res.data);
-        setIsOwnProfile(id === 'me');
+        // Fix: Always set isOwnProfile correctly
+        if (id === 'me' || (currentUser && res.data && res.data.id === currentUser.id)) {
+          setIsOwnProfile(true);
+        } else {
+          setIsOwnProfile(false);
+        }
         setError('');
         console.log('Loaded user data:', res.data);
         console.log('User skills:', res.data.skills);
@@ -333,7 +369,7 @@ const Profile = () => {
       }
     };
     fetchProfile();
-  }, [id, navigate]);
+  }, [id, navigate, currentUser]);
 
   useEffect(() => {
     if (user && user.projects && Array.isArray(user.projects)) {
@@ -384,6 +420,15 @@ const Profile = () => {
     setFriendLoading(false);
   };
 
+  const handleCancelRequest = async () => {
+    try {
+      await api.delete(`/users/${user.id}/cancel-friend-request`);
+      setFriendStatus(null);
+    } catch (err) {
+      alert('Failed to cancel request');
+    }
+  };
+
   const handleProjectLike = async (projectId) => {
     if (!currentUser) return;
     const projectLike = projectLikes[projectId] || { liked: false, count: 0 };
@@ -416,35 +461,31 @@ const Profile = () => {
         {/* Header with Profile Photo Management */}
         <div className="flex items-center gap-6 mb-6 relative">
           <div className="relative">
-            {user.profilePicUrl && getImageUrl(user.profilePicUrl) ? (
-          <img
+            {user.profilePicUrl && getImageUrl(user.profilePicUrl) && !imgError ? (
+              <img
                 src={getImageUrl(user.profilePicUrl)}
-            alt="Profile"
-            className="w-24 h-24 rounded-full object-cover border-2 border-[#32a86d]"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
+                alt="Profile"
+                className="w-24 h-24 rounded-full object-cover border-2 border-[#32a86d]"
+                onError={() => setImgError(true)}
               />
             ) : (
               <DefaultProfileImage username={user.username} />
             )}
-            
             {isOwnProfile && (
               <div className="absolute -bottom-2 -right-2 flex gap-1">
                 <button
                   onClick={triggerFileInput}
                   disabled={uploadingPhoto}
-                  className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-blue-600 disabled:opacity-50"
-                  title="Upload new photo"
+                  className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold hover:bg-blue-600 disabled:opacity-50 border-2 border-white shadow-lg"
+                  title="Add/Change Profile Picture"
                 >
-                  {uploadingPhoto ? '⏳' : '+'}
+                  {uploadingPhoto ? '⏳' : <span role="img" aria-label="camera">📷</span>}
                 </button>
                 {user.profilePicUrl && (
                   <button
                     onClick={removeProfilePicture}
                     disabled={loading}
-                    className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 disabled:opacity-50"
+                    className="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold hover:bg-red-600 disabled:opacity-50 border-2 border-white shadow-lg"
                     title="Remove profile picture"
                   >
                     ×
@@ -481,26 +522,36 @@ const Profile = () => {
             <div className="absolute top-0 right-0 flex gap-2">
               <button
                 onClick={() => navigate('/edit-profile')}
-                className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d]"
+                className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] font-bold shadow-lg border-2 border-white"
               >
                 Edit Profile
               </button>
               <button
                 onClick={() => navigate('/add-project')}
-                className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d]"
+                className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] font-bold shadow-lg border-2 border-white"
               >
                 Add Project
               </button>
             </div>
           )}
           {currentUser && user && user.id !== currentUser.id && (
-            <button
-              onClick={handleFriend}
-              disabled={friendLoading}
-              className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition ${friendStatus === 'ACCEPTED' ? 'bg-green-200 text-green-700 border-green-300' : friendStatus === 'PENDING' ? 'bg-gray-200 text-gray-600 border-gray-300' : 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}`}
-            >
-              {friendStatus === 'ACCEPTED' ? 'Friends' : friendStatus === 'PENDING' ? 'Pending' : 'Add Friend'}
-            </button>
+            friendStatus === 'PENDING' ? (
+              <button
+                onClick={handleCancelRequest}
+                disabled={friendLoading}
+                className="px-4 py-2 rounded-full text-sm font-medium border-2 border-yellow-500 text-yellow-500 bg-white hover:border-yellow-600 transition"
+              >
+                Cancel Request
+              </button>
+            ) : (
+              <button
+                onClick={handleFriend}
+                disabled={friendLoading}
+                className="px-4 py-2 rounded-full text-sm font-medium border-2 border-[#32a86d] text-[#32a86d] bg-white hover:border-[#2c915d] transition"
+              >
+                Add Friend
+              </button>
+            )
           )}
         </div>
 
@@ -533,16 +584,14 @@ const Profile = () => {
         <div className="mb-6 p-4 bg-gray-50 rounded">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#32a86d]">📄 Resume</h2>
-          </div>
-          <div className="flex flex-col gap-2">
-            {user.resumeUrl ? (
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-gray-600">Resume uploaded ✓</p>
+            {/* Resume action buttons row */}
+            <div className="flex gap-2 justify-end items-center">
+              {user.resumeUrl && (
                 <button
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                  style={{ color: 'white' }}
                   onClick={async () => {
                     try {
-                      // Extract filename from user.resumeUrl
                       const filename = user.resumeUrl.split('/files/resumes/')[1];
                       const response = await api.get(`/files/resumes/${filename}`, { responseType: 'blob' });
                       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -559,117 +608,109 @@ const Profile = () => {
                     }
                   }}
                 >
-                  Download Uploaded Resume
+                  Download
                 </button>
+              )}
+              <button
+                className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+                style={{ color: 'white' }}
+                onClick={async () => {
+                  try {
+                    const response = await api.get(`/users/${user.id}/resume/generated`, { responseType: 'blob' });
+                    const blob = new Blob([response.data], { type: 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `${user.username}_profile_resume.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    alert('Failed to download generated resume.');
+                  }
+                }}
+              >
+                Generate
+              </button>
+              {isOwnProfile && (
+                <>
+                  <button
+                    className="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-600"
+                    style={{ color: 'white' }}
+                    onClick={triggerResumeInput}
+                  >
+                    Upload
+                  </button>
+                  {user.resumeUrl && (
+                    <button
+                      className="bg-red-500 text-white px-2 py-1 rounded text-xs hover:bg-red-600"
+                      style={{ color: 'white' }}
+                      onClick={removeResume}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            {user.resumeUrl ? (
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-600 mb-0">Resume uploaded ✓</p>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No resume uploaded yet.</p>
+              <p className="text-sm text-gray-500 mb-0">No resume uploaded yet.</p>
             )}
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-fit"
-              onClick={async () => {
-                try {
-                  const response = await api.get(`/users/${user.id}/resume/generated`, { responseType: 'blob' });
-                  const blob = new Blob([response.data], { type: 'application/pdf' });
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `${user.username}_profile_resume.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                } catch (err) {
-                  alert('Failed to download generated resume.');
-                }
-              }}
-            >
-              Download Generated Resume
-            </button>
+            {/* Hidden resume input */}
+            <input
+              ref={resumeInputRef}
+              type="file"
+              accept=".pdf"
+              onChange={handleResumeSelect}
+              className="hidden"
+            />
           </div>
-          {/* Hidden resume input */}
-          <input
-            ref={resumeInputRef}
-            type="file"
-            accept=".pdf"
-            onChange={handleResumeSelect}
-            className="hidden"
-          />
         </div>
 
         {/* Skills Section */}
         <div className="mb-6 p-4 bg-gray-50 rounded">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#32a86d]">🛠️ Skills</h2>
-            {isOwnProfile && (
-              <button
-                onClick={() => setShowSkillInput(true)}
-                className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-              >
-                Add Skill
-              </button>
-            )}
           </div>
-          {/* Skills Management Box */}
-          {showSkillInput && isOwnProfile && (
-            <div className="mb-4 p-3 bg-blue-50 rounded border border-blue-200">
-              <h3 className="text-sm font-medium text-blue-800 mb-2">Add New Skill</h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newSkill}
-                  onChange={e => setNewSkill(e.target.value)}
-                  placeholder="Enter skill name (e.g., JavaScript, React, Python)"
-                  className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d]"
-                  onKeyPress={e => e.key === 'Enter' && addSkill()}
-                />
-                <button
-                  onClick={addSkill}
-                  disabled={!newSkill.trim()}
-                  className="text-sm bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => { setShowSkillInput(false); setNewSkill(''); }}
-                  className="text-sm bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
           <div className="bg-white p-4 rounded border">
-            <div className="flex flex-wrap gap-2">
+            <div
+              className="flex flex-row flex-nowrap gap-6 justify-start overflow-x-auto"
+              style={{ whiteSpace: 'nowrap', minHeight: 140, maxWidth: '100%', borderBottom: '2px solid #e5e7eb', paddingBottom: 8, scrollbarColor: '#a0aec0 #edf2f7', scrollbarWidth: 'auto' }}
+            >
               {user.skills && Array.isArray(user.skills) && user.skills.length > 0 ? (
                 user.skills.map((skill, i) => {
-                  const skillName = getSkillName(skill);
+                  const skillName = skill.name || getSkillName(skill);
+                  const level = skill.level || 'Basic';
                   return (
-                    <span key={i} className="bg-[#32a86d] text-white px-3 py-1 rounded text-sm flex items-center gap-1">
-                      {skillName}
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => removeSkill(skillName)}
-                          className="text-white hover:text-red-200 text-xs font-bold"
-                          title="Remove skill"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </span>
+                    <div key={i} className="flex flex-col items-center mx-2">
+                      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-300">
+                        {/* Placeholder SVG */}
+                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="20" cy="20" r="18" stroke="#32a86d" strokeWidth="3" fill="#e5e7eb" />
+                          <text x="50%" y="55%" textAnchor="middle" fill="#32a86d" fontSize="16" fontWeight="bold" dy=".3em">S</text>
+                        </svg>
+                      </div>
+                      <div className="mt-2 text-xs font-semibold text-center">{skillName}</div>
+                      <span
+                        className={`mt-1 px-2 py-1 rounded-full text-xs font-bold w-28 text-center ${levelColors[level]} border border-gray-300`}
+                        title={level}
+                      >
+                        {level}
+                      </span>
+                    </div>
                   );
                 })
               ) : (
                 <p className="text-gray-500">No skills listed yet.</p>
               )}
             </div>
-            {isOwnProfile && user.skills && user.skills.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-600">
-                  💡 Click the × button on any skill to remove it
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -759,36 +800,8 @@ const Profile = () => {
             </div>
           ) : userPosts && userPosts.length > 0 ? (
             <div className="space-y-4">
-              {/* console.log('Rendering user posts:', userPosts); */}
               {userPosts.map((post) => (
-                <div key={post.id} className="bg-white p-4 rounded shadow border-l-4 border-[#32a86d]">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">
-                        {new Date(post.createdAt).toLocaleString()}
-                      </span>
-                    </div>
-                    {isOwnProfile && (
-                      <button
-                        onClick={async () => {
-                          if (window.confirm('Are you sure you want to delete this post?')) {
-                            try {
-                              await api.delete(`/posts/${post.id}`);
-                              window.location.reload();
-                            } catch (error) {
-                              alert('Failed to delete post: ' + (error.response?.data || error.message));
-                            }
-                          }
-                        }}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                        title="Delete post"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-gray-800 leading-relaxed">{post.content}</p>
-                </div>
+                <PostCard key={post.id} post={post} />
               ))}
             </div>
           ) : (
@@ -803,6 +816,11 @@ const Profile = () => {
             </div>
           )}
         </div>
+        {!isOwnProfile && user && (
+          <Link to={`/chat/${user.id}`} className="inline-block mt-2 px-4 py-2 bg-[#32a86d] text-white rounded hover:bg-[#278a57]">
+            Messages
+          </Link>
+        )}
       </div>
     </div>
   );

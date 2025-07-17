@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../Api/AuthContext.jsx';
 import api from '../Api/api.jsx';
+import { useNavigate } from 'react-router-dom';
 
 const PostCard = ({ post }) => {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [friendRequestSent, setFriendRequestSent] = useState(false);
   const [friendRequestStatus, setFriendRequestStatus] = useState(null);
+  const [showLikeCount, setShowLikeCount] = useState(true);
+  const [imgError, setImgError] = useState(false); // Track image load error
 
   // Helper function to construct full image URL
   const getImageUrl = (imagePath) => {
@@ -51,15 +55,9 @@ const PostCard = ({ post }) => {
         // Get like count
         const countRes = await api.get(`/likes/post/${post.id}/count`);
         setLikeCount(countRes.data);
-        // Check if user liked
-        // (Optional: If you have a hasUserLikedPost endpoint, use it. Otherwise, infer from post.likedBy if available)
-        // For now, assume backend returns likedBy array in post (if not, skip this)
-        if (post.likedBy && Array.isArray(post.likedBy)) {
-          setLiked(post.likedBy.some(u => u.id === currentUser.id));
-        } else {
-          // Fallback: try to like and catch error if already liked
-          // Or skip
-        }
+        // Check if user liked (use backend endpoint for status)
+        const statusRes = await api.get(`/likes/post/${post.id}/status?userId=${currentUser.id}`);
+        setLiked(statusRes.data.liked);
       } catch (error) {
         console.error('Error fetching like status:', error);
       }
@@ -88,13 +86,14 @@ const PostCard = ({ post }) => {
     try {
       if (!liked) {
         await api.post(`/likes/post/${post.id}?userId=${currentUser.id}`);
-        setLiked(true);
-        setLikeCount(likeCount + 1);
       } else {
         await api.post(`/likes/post/${post.id}/unlike?userId=${currentUser.id}`);
-        setLiked(false);
-        setLikeCount(likeCount - 1);
       }
+      // Always fetch the latest count and status after like/unlike
+      const countRes = await api.get(`/likes/post/${post.id}/count`);
+      setLikeCount(countRes.data);
+      const statusRes = await api.get(`/likes/post/${post.id}/status?userId=${currentUser.id}`);
+      setLiked(statusRes.data.liked);
     } catch (error) {
       console.error('Error toggling like:', error);
     } finally {
@@ -114,33 +113,49 @@ const PostCard = ({ post }) => {
     }
   };
 
+  const handleCancelRequest = async () => {
+    if (!currentUser || post.user.id === currentUser.id) return;
+    try {
+      await api.delete(`/users/${post.user.id}/cancel-friend-request`);
+      setFriendRequestStatus(null);
+    } catch (error) {
+      alert('Failed to cancel friend request: ' + (error.response?.data || error.message));
+    }
+  };
+
+  // Add unfriend handler
+  const handleUnfriend = async () => {
+    if (!currentUser || post.user.id === currentUser.id) return;
+    try {
+      await api.delete(`/users/${post.user.id}/unfollow`);
+      setFriendRequestStatus(null);
+      alert('Unfriended successfully!');
+    } catch (error) {
+      alert('Failed to unfriend: ' + (error.response?.data || error.message));
+    }
+  };
+
   return (
     <div className="border-2 border-[#32a86d] rounded-xl p-4 shadow bg-white">
       {/* User info header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           {/* Profile picture */}
-          <div className="relative">
-            {post.user?.profilePicUrl ? (
+          <div className="relative cursor-pointer" onClick={() => navigate(`/profile/${post.user?.id}`)}>
+            {post.user?.profilePicUrl && getImageUrl(post.user.profilePicUrl) && !imgError ? (
               <img
                 src={getImageUrl(post.user.profilePicUrl)}
                 alt="Profile"
                 className="w-10 h-10 rounded-full object-cover border-2 border-[#32a86d]"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
+                onError={() => setImgError(true)}
               />
-            ) : null}
-            <DefaultProfileImage 
-              username={post.user?.username} 
-              style={{ display: post.user?.profilePicUrl ? 'none' : 'flex' }}
-            />
+            ) : (
+              <DefaultProfileImage username={post.user?.username} />
+            )}
           </div>
-          
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[#32a86d] text-lg">
+              <span className="font-semibold text-[#32a86d] text-lg cursor-pointer" onClick={() => navigate(`/profile/${post.user?.id}`)}>
                 {post.user?.username || 'Unknown User'}
               </span>
               {post.user?.location && (
@@ -154,7 +169,6 @@ const PostCard = ({ post }) => {
             </span>
           </div>
         </div>
-        
         {/* Post author indicator */}
         {currentUser && post.user?.id === currentUser.id && (
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -185,29 +199,43 @@ const PostCard = ({ post }) => {
           <button
             onClick={handleLike}
             disabled={loading}
-            className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border-2 transition 
-              ${liked ? 'bg-[#32a86d] text-white border-[#32a86d]' : 'bg-white text-[#32a86d] border-[#32a86d]'}
-              ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#32a86d] hover:text-white'}`}
+            onMouseEnter={() => setShowLikeCount(false)}
+            onMouseLeave={() => setShowLikeCount(true)}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border-2 transition
+              ${liked ? 'bg-white text-red-500 border-red-500 hover:border-red-700' : 'bg-white text-[#32a86d] border-[#32a86d] hover:border-[#2c915d]'}
+              ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {liked ? '❤️' : '🤍'} {likeCount > 0 && <span>({likeCount})</span>}
+            <span className={liked ? 'text-red-500' : 'text-[#32a86d]'}>{liked ? '❤️' : '🤍'}</span>
+            {showLikeCount !== false && likeCount > 0 && <span>{likeCount}</span>}
           </button>
-
-          {/* Friend request button - show for different users */}
-          {currentUser && 
-            post.user?.id !== currentUser.id && (
-            <button
-              onClick={handleFriendRequest}
-              disabled={friendRequestStatus === 'PENDING' || friendRequestStatus === 'ACCEPTED'}
-              className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border-2 transition
-                ${friendRequestStatus === 'PENDING' ? 'bg-gray-300 text-gray-600 border-gray-300 cursor-not-allowed' :
-                  friendRequestStatus === 'ACCEPTED' ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed' :
-                  'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'}
-              `}
-            >
-              {friendRequestStatus === 'PENDING' ? '⏳ Pending' :
-                friendRequestStatus === 'ACCEPTED' ? '✅ Friends' :
-                '👥 Add Friend'}
-            </button>
+          {/* Friend action button */}
+          {currentUser && post.user?.id !== currentUser.id && (
+            <>
+              {friendRequestStatus === null && (
+                <button
+                  onClick={handleFriendRequest}
+                  className="px-3 py-1 rounded-full text-sm font-medium border-2 border-blue-500 text-blue-500 bg-white hover:border-blue-700 transition"
+                >
+                  Add Friend
+                </button>
+              )}
+              {friendRequestStatus === 'PENDING' && (
+                <button
+                  onClick={handleCancelRequest}
+                  className="px-3 py-1 rounded-full text-sm font-medium border-2 border-yellow-500 text-yellow-500 bg-white hover:border-yellow-600 transition"
+                >
+                  Cancel Request
+                </button>
+              )}
+              {friendRequestStatus === 'ACCEPTED' && (
+                <button
+                  onClick={handleUnfriend}
+                  className="px-3 py-1 rounded-full text-sm font-medium border-2 border-red-500 text-red-500 bg-white hover:border-red-600 transition"
+                >
+                  Unfriend
+                </button>
+              )}
+            </>
           )}
         </div>
 

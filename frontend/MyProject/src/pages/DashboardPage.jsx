@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import api from '../Api/api.jsx';
 
-
 const DashboardPage = () => {
   // State to hold posts
   const [posts, setPosts] = useState([]);
@@ -11,58 +10,36 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [showAllPosts, setShowAllPosts] = useState(true);
-  // State for image upload and preview
-  const [images, setImages] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  // Replace dashboardImages and carousel logic with a single dashboardImage
+  const [dashboardImage, setDashboardImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef();
 
-  const fileInputRef = useRef(null);
-
-  const handleUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const urls = files.map(file => URL.createObjectURL(file));
-    setImages(urls);
-    setCurrent(0);
-  };
-
-  const nextImage = () => {
-    if (images.length === 0) return;
-    setCurrent((prev) => (prev + 1) % images.length);
-  };
-
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % images.length);
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + images.length) % images.length);
-
-  const handleAddImageClick = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setImages((prev) => [...prev, ev.target.result]);
-      };
-      reader.readAsDataURL(file);
+  // Fetch dashboard images from backend
+  const fetchDashboardImage = async () => {
+    try {
+      const res = await api.get('/dashboard-images');
+      setDashboardImage(res.data);
+    } catch (err) {
+      setDashboardImage(null);
     }
   };
 
-  // Fetch posts and user data from backend on mount
+  // Fetch posts, user, and dashboard images on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch user data
         const userRes = await api.get('/users/me');
         setUser(userRes.data);
-
         // Fetch user's own posts
         const myPostsRes = await api.get('/posts/me');
         setMyPosts(myPostsRes.data);
-
         // Fetch all posts
         const allPostsRes = await api.get('/posts/all');
         setPosts(allPostsRes.data);
+        // Fetch dashboard image
+        await fetchDashboardImage();
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -71,6 +48,48 @@ const DashboardPage = () => {
     };
     fetchData();
   }, []);
+
+  // Carousel controls
+  const nextSlide = () => {
+    if (dashboardImage === null) return;
+    // No carousel, so no next/prev logic needed here
+  };
+  const prevSlide = () => {
+    if (dashboardImage === null) return;
+    // No carousel, so no next/prev logic needed here
+  };
+
+  // Admin: handle image upload
+  const handleAddImageClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await api.post('/dashboard-images/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      await fetchDashboardImage();
+    } catch (err) {
+      alert('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+  // Admin: handle image delete
+  const handleDeleteImage = async (id) => {
+    if (!window.confirm('Delete this image?')) return;
+    try {
+      await api.delete(`/dashboard-images/${id}`);
+      await fetchDashboardImage();
+    } catch (err) {
+      alert('Failed to delete image');
+    }
+  };
 
   // Sort posts by creation date (latest first)
   const sortedPosts = [...posts].sort((a, b) => {
@@ -84,18 +103,27 @@ const DashboardPage = () => {
       {/*Incoming Updates By Naveen Banwala*/}
 
       <div className="max-w-6xl mx-auto ">
-        {/* Welcome Section */}
+        {/* Dashboard Image */}
         <div className="relative mb-6">
-          {/* Left arrow */}
-          <button onClick={prevSlide} className="absolute left-2 top-1/2 z-10 bg-white rounded-full shadow p-2">&#8592;</button>
-          {/* Image */}
-          <img src={images[currentSlide]} alt="slide" className="w-full h-64 object-cover rounded" />
-          {/* Right arrow */}
-          <button onClick={nextSlide} className="absolute right-2 top-1/2 z-10 bg-white rounded-full shadow p-2">&#8594;</button>
-          {/* Show add/update button only for admin */}
+          {dashboardImage ? (
+            <img
+              src={dashboardImage.url}
+              alt="dashboard"
+              className="w-full h-64 object-cover rounded"
+            />
+          ) : (
+            <div className="w-full h-64 flex items-center justify-center bg-gray-200 rounded text-gray-500">No dashboard image</div>
+          )}
+          {/* Show add/delete buttons only for admin */}
           {user?.roles?.includes('ROLE_ADMIN') && (
             <>
-              <button onClick={handleAddImageClick} className="absolute bottom-2 right-2 bg-blue-500 text-white px-4 py-2 rounded">Add/Update Image</button>
+              <button
+                onClick={handleAddImageClick}
+                className="absolute bottom-2 right-2 bg-blue-500 text-white px-4 py-2 rounded"
+                disabled={uploading}
+              >
+                {uploading ? 'Uploading...' : 'Add Image'}
+              </button>
               <input
                 type="file"
                 accept="image/*"
@@ -103,6 +131,14 @@ const DashboardPage = () => {
                 onChange={handleImageChange}
                 style={{ display: 'none' }}
               />
+              {dashboardImage && (
+                <button
+                  onClick={() => handleDeleteImage(dashboardImage.id)}
+                  className="absolute bottom-2 left-2 bg-red-500 text-white px-4 py-2 rounded"
+                >
+                  Delete Image
+                </button>
+              )}
             </>
           )}
         </div>

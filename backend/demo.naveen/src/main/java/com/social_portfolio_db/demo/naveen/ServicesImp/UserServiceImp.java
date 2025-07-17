@@ -39,13 +39,11 @@ public class UserServiceImp implements UserService {
 
     @Override
     public UserProfileDTO getUserProfile(Long userId) {
-        Users user = userRepo.findById(userId)
+        Users user = userRepo.findByIdWithSkills(userId)
             .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-        // Force initialization of skills to avoid LazyInitializationException
-        user.getSkills().size();
         // Force initialization of projects to avoid LazyInitializationException
         user.getProjects().size();
-        return UserProfileMapper.toDto(user);
+        return UserProfileMapper.toDto(user, userRepo);
     }
 
     @Override
@@ -63,7 +61,7 @@ public class UserServiceImp implements UserService {
         }
 
         return users.stream()
-                    .map(UserProfileMapper::toDto)
+                    .map(u -> UserProfileMapper.toDto(u, userRepo))
                     .toList();
     }
 
@@ -75,21 +73,25 @@ public class UserServiceImp implements UserService {
         }
         user.setBio(dto.getBio());
         user.setLocation(dto.getLocation());
-        user.setProfilePicUrl(dto.getProfilePicUrl());
+        if (dto.getProfilePicUrl() != null && !dto.getProfilePicUrl().isEmpty()) {
+            user.setProfilePicUrl(dto.getProfilePicUrl());
+        }
         user.setResumeUrl(dto.getResumeUrl());
 
-        Set<Skills> newSkills = new java.util.HashSet<>();
+        // Only update skills if provided
         if (dto.getSkills() != null) {
-            for (String name : dto.getSkills()) {
-                Skills skill = skillRepo.findBySkillName(name)
+            Set<Skills> newSkills = new java.util.HashSet<>();
+            for (UserProfileDTO.SkillDTO skillDto : dto.getSkills()) {
+                Skills skill = skillRepo.findBySkillNameAndUser(skillDto.getName(), user)
                     .orElseGet(() -> {
-                        Skills s = Skills.builder().skillName(name).user(user).build();
+                        Skills s = Skills.builder().skillName(skillDto.getName()).user(user).build();
                         return skillRepo.save(s);
                     });
+                skill.setLevel(skillDto.getLevel());
                 newSkills.add(skill);
             }
+            user.setSkills(newSkills);
         }
-        user.setSkills(newSkills);
 
         // Handle projects without duplication
         if (dto.getProjects() != null) {
@@ -136,7 +138,7 @@ public class UserServiceImp implements UserService {
 
 public List<UserProfileDTO> searchUsersByParams(String name, String skill, String location) {
     List<Users> users = userRepo.searchUsers(name, skill, location);
-    return users.stream().map(UserProfileMapper::toDto).toList();
+    return users.stream().map(u -> UserProfileMapper.toDto(u, userRepo)).toList();
 }
 
 public List<Users> getFollowers(Long userId){

@@ -99,7 +99,7 @@ public class AdminController {
     @GetMapping("/users/{id}/profile")
     public ResponseEntity<UserProfileDTO> getUserProfileById(@PathVariable Long id) {
         Users user = userRepo.findById(id).orElseThrow();
-        UserProfileDTO dto = UserProfileMapper.toDto(user);
+        UserProfileDTO dto = UserProfileMapper.toDto(user, userRepo);
         return ResponseEntity.ok(dto);
     }
 }

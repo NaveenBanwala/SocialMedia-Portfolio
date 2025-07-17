@@ -125,12 +125,10 @@ public class Users {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private List<Notification> notifications = new ArrayList<>();
 
-    // ✅ Setter method for profile image path
     public void profilePicUrl(String path) {
         this.profilePicUrl = path;
     }
 
-    // ✅ Custom setter for skills (replaces current list)
     public void setSkills(Set<Skills> newSkills) {
         this.skills.clear();
         this.skills.addAll(newSkills);

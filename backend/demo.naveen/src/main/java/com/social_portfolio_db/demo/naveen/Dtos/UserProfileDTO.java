@@ -1,6 +1,8 @@
 package com.social_portfolio_db.demo.naveen.Dtos;
 
 import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Data
@@ -12,7 +14,7 @@ public class UserProfileDTO {
     private String profilePicUrl;
     private String resumeUrl;        
 
-    private List<String> skills; 
+    private List<SkillDTO> skills; 
 
     private List<ProjectDTO> projects;
     private List<String> roles;
@@ -20,6 +22,14 @@ public class UserProfileDTO {
     // Add follower/following counts for profile display
     private int followersCount;
     private int followingCount;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class SkillDTO {
+        private String name;
+        private String level;
+    }
 }
 
 

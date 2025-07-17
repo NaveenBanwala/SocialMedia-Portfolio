@@ -22,6 +22,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -95,6 +96,29 @@ public class AuthController {
         response.setUsername(userDetails.getUsername());
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> payload, @AuthenticationPrincipal UserDetails userDetails) {
+        String oldPassword = payload.get("oldPassword");
+        String newPassword = payload.get("newPassword");
+        String email = userDetails.getUsername();
+
+        if (oldPassword == null || newPassword == null) {
+            return ResponseEntity.badRequest().body("Missing required fields");
+        }
+
+        Users user = userRepo.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return ResponseEntity.status(400).body("Old password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepo.save(user);
+
+        return ResponseEntity.ok("Password changed successfully");
     }
 
     @GetMapping("/users")

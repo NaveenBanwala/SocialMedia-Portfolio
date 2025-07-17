@@ -6,7 +6,6 @@ import api from '../Api/api.jsx';
 const AdminPanel = () => {
   // State for users and projects
   const [users, setUsers] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [mostFollowed, setMostFollowed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,13 +14,11 @@ const AdminPanel = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [userRes, projectRes, mostFollowedRes] = await Promise.all([
-          api.get('/admin/users'), // Adjust endpoint if needed
-          api.get('/admin/projects'), // Adjust endpoint if needed
+        const [userRes, mostFollowedRes] = await Promise.all([
+          api.get('/admin/users'),
           api.get('/admin/most-followed-users'),
         ]);
         setUsers(userRes.data);
-        setProjects(projectRes.data);
         setMostFollowed(mostFollowedRes.data);
       } catch (err) {
         setError('Error loading admin data.');
@@ -40,17 +37,6 @@ const AdminPanel = () => {
       setUsers(users.filter(u => u.id !== userId));
     } catch (err) {
       alert('Error deleting user.');
-    }
-  };
-
-  // Handle project delete
-  const handleDeleteProject = async (projectId) => {
-    if (!window.confirm('Are you sure you want to delete this project?')) return;
-    try {
-      await api.delete(`/admin/projects/${projectId}`);
-      setProjects(projects.filter(p => p.id !== projectId));
-    } catch (err) {
-      alert('Error deleting project.');
     }
   };
 
@@ -99,27 +85,6 @@ const AdminPanel = () => {
         {users.length === 0 && <div className="text-gray-500 mt-2">No users found.</div>}
       </div>
       
-      {/* Projects Table */}
-      <div>
-        <h2 className="text-xl font-semibold text-[#32a86d] mb-2">Projects</h2>
-        <table className="w-full border-2 border-[#32a86d] rounded-xl bg-white">
-          <thead>
-            <tr className="bg-[#32a86d] text-white">
-              <th className="p-2">Title</th>
-              <th className="p-2">Owner Email</th>
-              <th className="p-2 text-center">Likes</th>
-              <th className="p-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map(project => (
-              <AdminProjectRow key={project.id} project={project} onDelete={handleDeleteProject} />
-            ))}
-          </tbody>
-        </table>
-        {projects.length === 0 && <div className="text-gray-500 mt-2">No projects found.</div>}
-      </div>
-
       {/* Most Followed Users Section */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-[#32a86d] mb-2">Most Followed Users</h2>

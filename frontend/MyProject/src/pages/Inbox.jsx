@@ -51,11 +51,8 @@ const Inbox = () => {
     const handleAccept = async (fromUserId) => {
         try {
             await api.post(`/users/${fromUserId}/friend-request/accept`);
-            // Also follow each other
             await api.post(`/users/${user.id}/follow?followerId=${fromUserId}`);
-            // Remove from pending list
             setFriendRequests(reqs => reqs.filter(r => r.fromUserId !== fromUserId));
-            // Optionally, refresh followers/following elsewhere
         } catch (err) {
             alert('Failed to accept friend request.');
         }

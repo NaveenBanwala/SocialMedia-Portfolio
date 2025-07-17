@@ -37,6 +37,9 @@ public class Skills {
     @Column(name = "skill_name", nullable = false, length = 50)
     private String skillName;
 
+    @Column(name = "level", length = 20)
+    private String level;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private Users user;

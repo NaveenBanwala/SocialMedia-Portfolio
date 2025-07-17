@@ -91,5 +91,11 @@ public class LikeController {
         boolean liked = likeService.hasUserLikedProfile(likedById, likedUserId);
         return ResponseEntity.ok(java.util.Map.of("liked", liked));
     }
+
+    @GetMapping("/post/{postId}/status")
+    public ResponseEntity<?> getPostLikeStatus(@PathVariable Long postId, @RequestParam Long userId) {
+        boolean liked = likeService.hasUserLikedPost(userId, postId);
+        return ResponseEntity.ok(java.util.Map.of("liked", liked));
+    }
 }
 

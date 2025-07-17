@@ -8,6 +8,11 @@ function Navbar() {
   const { isAuthenticated, isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [notifCount, setNotifCount] = useState(0);
+  const [imgError, setImgError] = useState(false); // Track image load error
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -24,6 +29,15 @@ function Navbar() {
     };
     fetchNotifications();
   }, [user]);
+
+  useEffect(() => {
+    if (dark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', JSON.stringify(dark));
+  }, [dark]);
 
   // Helper function to construct full image URL
   const getImageUrl = (imagePath) => {
@@ -55,22 +69,16 @@ function Navbar() {
           to="/profile/me"
           className="w-10 h-10 flex items-center justify-center rounded-full bg-[#32a86d] text-white text-sm font-semibold hover:opacity-90 transition overflow-hidden relative"
         >
-          {hasValidProfilePic ? (
+          {hasValidProfilePic && !imgError ? (
             <img
               src={getImageUrl(user.profilePicUrl)}
               alt="Profile"
               className="w-full h-full object-cover"
-              onError={(e) => {
-                // Hide the broken image and show default initials
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
+              onError={() => setImgError(true)}
             />
-          ) : null}
-          <DefaultProfileImage 
-            username={user?.username} 
-            style={{ display : hasValidProfilePic ? 'none' : 'flex' }}
-          />
+          ) : (
+            <DefaultProfileImage username={user?.username} />
+          )}
         </Link>
 
         {/* Search Button */}
@@ -99,8 +107,8 @@ function Navbar() {
         )}
 
         {/* Inbox Link */}
-        <Link to="/inbox" className="relative ml-4">
-          <span className="material-icons">inbox</span>
+        <Link to="/inbox" className="relative ml-4" title="Notifications">
+          <span style={{ fontSize: '2rem', lineHeight: '2rem' }}>🔔</span>
           {notifCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1">{notifCount}</span>
           )}
@@ -118,6 +126,15 @@ function Navbar() {
           {!isAdmin ? "Social Portfolio" : "WELCOME NAVEEN"}
         </Link>
       </div>
+
+      {/* Show Messages for admin, Feedback for users */}
+      {isAuthenticated && (
+        isAdmin ? (
+          <button className="bg-white border-2 border-[#32a86d] rounded px-4 py-2 flex items-center gap-2" onClick={() => navigate("/messages")}>Messages</button>
+        ) : (
+          <button className="bg-blue-500 text-white rounded px-4 py-2 flex items-center gap-2" onClick={() => navigate("/admin-response")}>Admin Response</button>
+        )
+      )}
 
     {/*Setting Option */}
     <SideBar/>

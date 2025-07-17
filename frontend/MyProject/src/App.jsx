@@ -16,9 +16,29 @@ import EditProfile from './pages/EditProfile.jsx';
 import EditProjectPage from './pages/EditProjectPage.jsx';
 import { AuthProvider, useAuth } from './Api/AuthContext.jsx';
 import ManageFriendsPage from './pages/ManageFriendsPage.jsx';
+import Support from './pages/Support.jsx';
+import ManageAccount from './pages/ManageAccount.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import AdminChatInterface from './pages/AdminChatInterface.jsx';
+import AdminResponsePage from './pages/AdminResponsePage.jsx';
+import { useEffect, useState } from 'react';
 
 const AppRoutes = () => {
     const { isAuthenticated } = useAuth();
+    const [dark, setDark] = useState(() => {
+        const saved = localStorage.getItem('darkMode');
+        return saved ? JSON.parse(saved) : false;
+    });
+
+    useEffect(() => {
+        if (dark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('darkMode', JSON.stringify(dark));
+    }, [dark]);
+
     return (
         <>
         {isAuthenticated ? <Navbar /> : null}
@@ -81,9 +101,31 @@ const AppRoutes = () => {
         element={isAuthenticated ? <ManageFriendsPage /> : <Navigate to="/login"/>}
         ></Route>
 
-        {/* 404 fallback */}
+        <Route path="/support"
+            element={isAuthenticated ?<Support/> : <Navigate to="/login" />}
+        ></Route>
+
+        <Route path="/admin-response" element={<AdminResponsePage />} />
+
+        <Route  path="/messages"
+            element={isAuthenticated ? <AdminChatInterface /> : <Navigate to="/login" />}
+    >
+    </Route>
+
+
+        <Route path="/manage-account" element={<ProtectedRoute><ManageAccount /></ProtectedRoute>} />
+
         <Route path="*" element={<h1>404 Not Found</h1>} />
         </Routes>
+        {/* Floating dark mode toggle button */}
+        <button
+            onClick={() => setDark((d) => !d)}
+            className="fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-lg bg-white dark:bg-gray-800 text-2xl border border-gray-300 dark:border-gray-700 transition-colors"
+            aria-label="Toggle dark mode"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+        >
+            {dark ? '🌙' : '☀️'}
+        </button>
         </>
     );
 };

@@ -28,7 +28,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
-    // Extract token from Authorization header
     private String getJwtFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
@@ -39,14 +38,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
+            @org.springframework.lang.NonNull HttpServletRequest request,
+            @org.springframework.lang.NonNull HttpServletResponse response,
+            @org.springframework.lang.NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
         // Skip JWT filter for public endpoints
         String path = request.getServletPath();
-        if (path.startsWith("/api/auth/")) {
+        if (path.equals("/api/auth/login") || path.equals("/api/auth/register")) {
             filterChain.doFilter(request, response);
             return;
         }

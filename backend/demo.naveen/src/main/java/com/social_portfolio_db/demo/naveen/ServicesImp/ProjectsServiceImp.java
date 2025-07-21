@@ -81,7 +81,6 @@ public class ProjectsServiceImp implements ProjectService {
             username = "Unknown";
             userId = null;
         }
-        System.out.println("Project " + p.getId() + " user: " + (p.getUser() != null ? p.getUser().getId() : "null") + " username: " + username);
         return ProjectDTO.builder()
                 .id(p.getId())
                 .title(p.getTitle())

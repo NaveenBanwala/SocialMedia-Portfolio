@@ -5,9 +5,17 @@
 @tailwind utilities;
 
 body {
-  @apply bg-white text-black;
+  background: url('/images/BackgroundImages/alex-knight-c4Fvlp63yAQ-unsplash.jpg') no-repeat center center fixed;
+  background-size: cover;
+  @apply text-black;
 }
 
-html.dark body {
-  @apply bg-gray-900 text-black;
+.translucent-bg {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 2rem;
 }

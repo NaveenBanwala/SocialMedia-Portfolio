@@ -150,7 +150,9 @@ const PostCard = ({ post }) => {
                 onError={() => setImgError(true)}
               />
             ) : (
-              <DefaultProfileImage username={post.user?.username} />
+              <div className="w-10 h-10 rounded-full bg-[#32a86d] flex items-center justify-center text-white text-sm font-bold border-2 border-[#32a86d]">
+                {post.user?.username ? post.user.username.charAt(0).toUpperCase() : 'U'}
+              </div>
             )}
           </div>
           <div>

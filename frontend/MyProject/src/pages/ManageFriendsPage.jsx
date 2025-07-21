@@ -86,6 +86,10 @@ function ManageFriendsPage() {
         }
     }
 
+    // Filter following to only show accepted friends
+    const acceptedFollowing = following.filter(friend => friend.status === 'ACCEPTED');
+    const pendingFollowing = following.filter(friend => friend.status === 'PENDING');
+
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-6">Manage Friends</h1>
@@ -128,30 +132,45 @@ function ManageFriendsPage() {
 
                 {/* Following Section */}
                 <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-semibold mb-4">Following ({following.length})</h2>
-                    {following && following.length > 0 ? (
+                    <h2 className="text-xl font-semibold mb-4">Following ({acceptedFollowing.length})</h2>
+                    {acceptedFollowing && acceptedFollowing.length > 0 ? (
                         <ul className="space-y-2">
-                            {following.map((friend, index) => (
+                            {acceptedFollowing.map((friend, index) => (
                                 <li key={friend.id || index} className="flex items-center p-3 bg-gray-50 rounded-lg">
                                     <div className="flex-1 space-y-2">
                                         <div className="font-medium">{friend.username || friend.name}</div>
                                         <div className="text-sm text-gray-600">{friend.email}</div>
                                     </div>
-                                    {friend.status === "PENDING" ? (
-                                        <button className="bg-yellow-400 text-white p-2 border-1" onClick={() => cancelFriendRequest(friend.id)}>
-                                            Cancel Request
-                                        </button>
-                                    ) : (
-                                        <button className="bg-red-300 text-white p-2 border-1" onClick={()=>removeUnfollow(friend.id)}>
-                                            Unfollow
-                                        </button>
-                                    )}
+                                    <button className="bg-red-300 text-white p-2 border-1" onClick={()=>removeUnfollow(friend.id)}>
+                                        Unfollow
+                                    </button>
                                 </li>
                             ))}
                         </ul>
                     ) : (
                         <p className="text-gray-500">Not following anyone.</p>
                     )}
+                </div>
+                {/* Pending Requests Sent Section */}
+                <div className="bg-white p-6 rounded-lg shadow-md mt-4">
+                  <h2 className="text-xl font-semibold mb-4">Pending Requests Sent ({pendingFollowing.length})</h2>
+                  {pendingFollowing.length > 0 ? (
+                    <ul className="space-y-2">
+                      {pendingFollowing.map((friend, index) => (
+                        <li key={friend.id || index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1 space-y-2">
+                            <div className="font-medium">{friend.username || friend.name}</div>
+                            <div className="text-sm text-gray-600">{friend.email}</div>
+                          </div>
+                          <button className="bg-yellow-400 text-white p-2 border-1" onClick={() => cancelFriendRequest(friend.id)}>
+                            Cancel Request
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-500">You have no pending friend requests sent.</p>
+                  )}
                 </div>
             </div>
         </div>

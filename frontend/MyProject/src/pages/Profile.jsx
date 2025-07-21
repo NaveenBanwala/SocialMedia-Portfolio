@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../Api/api.jsx';
 import { useAuth } from '../Api/AuthContext.jsx';
 import PostCard from '../components/PostCard';
 import { useState as useReactState } from 'react';
+import { ChatModalContext } from '../contexts/ChatModalContext.jsx';
 
 const Profile = () => {
   const { id } = useParams(); // 'me' or user id
@@ -390,12 +391,23 @@ const Profile = () => {
   }, [user && user.projects, currentUser]);
 
   useEffect(() => {
-    // Fetch friend status
+    // Fetch friend status in both directions
     const fetchFriendStatus = async () => {
       if (!user?.id || !currentUser || user.id === currentUser.id) return;
       try {
-        const res = await api.get(`/users/${user.id}/friend-request/status`);
-        setFriendStatus(res.data ? res.data.status : null);
+        // 1. Current user -> profile user
+        const res1 = await api.get(`/users/${user.id}/friend-request/status`);
+        // 2. Profile user -> current user
+        const res2 = await api.get(`/users/${currentUser.id}/friend-request/status`, { params: { otherUserId: user.id } });
+        const status1 = res1.data ? res1.data.status : null;
+        const status2 = res2.data ? res2.data.status : null;
+        if (status1 === 'ACCEPTED' || status2 === 'ACCEPTED') {
+          setFriendStatus('ACCEPTED');
+        } else if (status1 === 'PENDING' || status2 === 'PENDING') {
+          setFriendStatus('PENDING');
+        } else {
+          setFriendStatus(null);
+        }
       } catch (err) {
         setFriendStatus(null);
       }
@@ -451,13 +463,51 @@ const Profile = () => {
     return String(skill);
   };
 
+  // Render friend button based on status
+  const renderFriendButton = () => {
+    if (!currentUser || !user || user.id === currentUser.id) return null;
+    if (friendStatus === 'ACCEPTED') {
+      return (
+        <button
+          onClick={handleFriend}
+          disabled={friendLoading}
+          className="px-4 py-2 rounded-full text-sm font-medium border-2 border-green-500 text-green-700 bg-white hover:border-green-600 transition"
+        >
+          Friends
+        </button>
+      );
+    } else if (friendStatus === 'PENDING') {
+      return (
+        <button
+          onClick={handleCancelRequest}
+          disabled={friendLoading}
+          className="px-4 py-2 rounded-full text-sm font-medium border-2 border-yellow-500 text-yellow-500 bg-white hover:border-yellow-600 transition"
+        >
+          Cancel Request
+        </button>
+      );
+    } else {
+      return (
+        <button
+          onClick={handleFriend}
+          disabled={friendLoading}
+          className="px-4 py-2 rounded-full text-sm font-medium border-2 border-[#32a86d] text-[#32a86d] bg-white hover:border-[#2c915d] transition"
+        >
+          Add Friend
+        </button>
+      );
+    }
+  };
+
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!user) return <div className="p-6">Loading...</div>;
 
+  const { setShowChat, setSelectedUser } = useContext(ChatModalContext);
+
   // Show profile as usual
   return (
-    <div className="p-8 min-h-screen bg-gray-100">
-      <div className="bg-white shadow rounded p-6 max-w-4xl mx-auto">
+    <div className="p-8 min-h-screen">
+      <div className="bg-white shadow-[0_8px_48px_0_rgba(50,168,109,0.45)] rounded p-6 max-w-4xl mx-auto">
         {/* Header with Profile Photo Management */}
         <div className="flex items-center gap-6 mb-6 relative">
           <div className="relative">
@@ -471,36 +521,7 @@ const Profile = () => {
             ) : (
               <DefaultProfileImage username={user.username} />
             )}
-            {isOwnProfile && (
-              <div className="absolute -bottom-2 -right-2 flex gap-1">
-                <button
-                  onClick={triggerFileInput}
-                  disabled={uploadingPhoto}
-                  className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold hover:bg-blue-600 disabled:opacity-50 border-2 border-white shadow-lg"
-                  title="Add/Change Profile Picture"
-                >
-                  {uploadingPhoto ? '⏳' : <span role="img" aria-label="camera">📷</span>}
-                </button>
-                {user.profilePicUrl && (
-                  <button
-                    onClick={removeProfilePicture}
-                    disabled={loading}
-                    className="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold hover:bg-red-600 disabled:opacity-50 border-2 border-white shadow-lg"
-                    title="Remove profile picture"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            )}
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
+            {/* Removed edit/remove icon overlay buttons here */}
           </div>
           
           <div className="flex-1">
@@ -518,41 +539,42 @@ const Profile = () => {
             </div>
           </div>
           
-          {isOwnProfile && (
-            <div className="absolute top-0 right-0 flex gap-2">
-              <button
-                onClick={() => navigate('/edit-profile')}
-                className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] font-bold shadow-lg border-2 border-white"
-              >
-                Edit Profile
-              </button>
-              <button
-                onClick={() => navigate('/add-project')}
-                className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] font-bold shadow-lg border-2 border-white"
-              >
-                Add Project
-              </button>
-            </div>
-          )}
-          {currentUser && user && user.id !== currentUser.id && (
-            friendStatus === 'PENDING' ? (
-              <button
-                onClick={handleCancelRequest}
-                disabled={friendLoading}
-                className="px-4 py-2 rounded-full text-sm font-medium border-2 border-yellow-500 text-yellow-500 bg-white hover:border-yellow-600 transition"
-              >
-                Cancel Request
-              </button>
-            ) : (
-              <button
-                onClick={handleFriend}
-                disabled={friendLoading}
-                className="px-4 py-2 rounded-full text-sm font-medium border-2 border-[#32a86d] text-[#32a86d] bg-white hover:border-[#2c915d] transition"
-              >
-                Add Friend
-              </button>
-            )
-          )}
+          <div className="absolute top-0 right-0 flex flex-row gap-2 items-center">
+            {isOwnProfile && (
+              <>
+                <button
+                  onClick={() => navigate('/edit-profile')}
+                  className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] font-bold shadow-lg border-2 border-white"
+                >
+                  Edit Profile
+                </button>
+                <button
+                  onClick={() => navigate('/add-project')}
+                  className="bg-[#32a86d] text-white px-4 py-2 rounded hover:bg-[#2c915d] font-bold shadow-lg border-2 border-white"
+                >
+                  Add Project
+                </button>
+              </>
+            )}
+            {!isOwnProfile && user && (
+              <>
+                {currentUser && user.id !== currentUser.id && renderFriendButton()}
+                <button
+                  onClick={() => {
+                    if (friendStatus === 'ACCEPTED') {
+                      setSelectedUser(user);
+                      setShowChat(true);
+                    } else {
+                      alert('You must be friends to chat.');
+                    }
+                  }}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 font-bold shadow-lg border-2 border-white ml-2"
+                >
+                  Message
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Personal Information Section */}
@@ -562,11 +584,11 @@ const Profile = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-600">Username (used for login)</p>
+              <p className="text-sm text-gray-600">Username</p>
               <p className="font-medium">{user.username}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Email (used for login)</p>
+              <p className="text-sm text-gray-600">Email</p>
               <p className="font-medium">{user.email}</p>
             </div>
             <div>
@@ -715,14 +737,14 @@ const Profile = () => {
         </div>
 
         {/* Projects Section */}
-        <div className="p-4 bg-gray-50 rounded">
+        <div className="p-4 shadow-[0_8px_48px_0_rgba(50,168,109,0.30)]">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#32a86d]">💼 Projects</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {user && user.projects && Array.isArray(user.projects) && user.projects.length > 0 ? (
               user.projects.map((project) => (
-                <div key={project.id || project.title} className="bg-white p-4 rounded shadow relative">
+                <div key={project.id || project.title} className="shadow relative">
                   {isOwnProfile && (
                     <button
                       onClick={() => deleteProject(project.id)}
@@ -777,19 +799,21 @@ const Profile = () => {
         </div>
 
         {/* Posts Section */}
-        <div className="mb-6 p-4 bg-gray-50 rounded">
+        <div className="mb-6 p-4 shadow-[0_8px_48px_0_rgba(50,168,109,0.30)]">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-semibold text-[#32a86d]">📝 Posts</h2>
             <div className="flex gap-2">
               {isOwnProfile && (
-                <button
-                  onClick={() => user.id && fetchUserPosts(user.id)}
-                  disabled={loadingPosts}
-                  className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
-                  title="Refresh posts"
-                >
-                  {loadingPosts ? '⏳' : '🔄'}
-                </button>
+                <>
+                  <button
+                    onClick={() => user.id && fetchUserPosts(user.id)}
+                    disabled={loadingPosts}
+                    className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
+                    title="Refresh posts"
+                  >
+                    {loadingPosts ? '⏳' : '🔄'}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -799,7 +823,7 @@ const Profile = () => {
               <p className="text-gray-500">Loading posts...</p>
             </div>
           ) : userPosts && userPosts.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4">
               {userPosts.map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
@@ -816,11 +840,6 @@ const Profile = () => {
             </div>
           )}
         </div>
-        {!isOwnProfile && user && (
-          <Link to={`/chat/${user.id}`} className="inline-block mt-2 px-4 py-2 bg-[#32a86d] text-white rounded hover:bg-[#278a57]">
-            Messages
-          </Link>
-        )}
       </div>
     </div>
   );

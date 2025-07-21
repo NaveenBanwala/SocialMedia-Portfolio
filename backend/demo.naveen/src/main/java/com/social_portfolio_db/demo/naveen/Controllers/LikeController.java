@@ -50,10 +50,8 @@ public class LikeController {
             if (e.getMessage().contains("not found")) {
                 return ResponseEntity.status(404).body(e.getMessage());
             }
-            e.printStackTrace();
             return ResponseEntity.badRequest().body("Error liking post: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }
@@ -67,10 +65,8 @@ public class LikeController {
             if (e.getMessage().contains("not found")) {
                 return ResponseEntity.status(404).body(e.getMessage());
             }
-            e.printStackTrace();
             return ResponseEntity.badRequest().body("Error unliking post: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body("Internal server error: " + e.getMessage());
         }
     }

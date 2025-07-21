@@ -21,4 +21,7 @@ public class DashboardImage {
 
     @Column(nullable = false)
     private LocalDateTime uploadedAt = LocalDateTime.now();
+
+    @Column(name = "position")
+    private String position = "center";
 } 

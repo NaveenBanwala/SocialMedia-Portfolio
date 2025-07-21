@@ -22,6 +22,10 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import AdminChatInterface from './pages/AdminChatInterface.jsx';
 import AdminResponsePage from './pages/AdminResponsePage.jsx';
 import { useEffect, useState } from 'react';
+import { ChatModalContext } from './contexts/ChatModalContext.jsx';
+import VotingContest from './pages/VotingContest.jsx';
+import VotingApplyPage from './pages/VotingApplyPage.jsx';
+import AdminCreateContest from './pages/AdminCreateContest.jsx';
 
 const AppRoutes = () => {
     const { isAuthenticated } = useAuth();
@@ -95,6 +99,18 @@ const AppRoutes = () => {
             path="/edit-project/:id"
             element={isAuthenticated ? <EditProjectPage /> : <Navigate to="/login" />}
         />
+        <Route
+            path="/voting-contest"
+            element={isAuthenticated ? <VotingContest /> : <Navigate to="/login" />}
+        />
+        <Route
+            path="/voting-contest/apply"
+            element={isAuthenticated ? <VotingApplyPage /> : <Navigate to="/login" />}
+        />
+        <Route
+            path="/admin/create-contest"
+            element={isAuthenticated ? <AdminCreateContest /> : <Navigate to="/login" />}
+        />
 
         <Route
         path="/manage-friends"
@@ -122,7 +138,7 @@ const AppRoutes = () => {
             onClick={() => setDark((d) => !d)}
             className="fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-lg bg-white dark:bg-gray-800 text-2xl border border-gray-300 dark:border-gray-700 transition-colors"
             aria-label="Toggle dark mode"
-            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+            style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' }}
         >
             {dark ? '🌙' : '☀️'}
         </button>
@@ -130,11 +146,19 @@ const AppRoutes = () => {
     );
 };
 
-const App = () => (
-    <AuthProvider>
-        <AppRoutes />
-    </AuthProvider>
-);
+function App() {
+    const [showChat, setShowChat] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    return (
+    <ChatModalContext.Provider value={{ showChat, setShowChat, selectedUser, setSelectedUser }}>
+        <AuthProvider>
+        <div className="min-h-screen bg-white shadow-[0_8px_48px_0_rgba(50,168,109,0.45)]">
+          <AppRoutes />
+        </div>
+        </AuthProvider>
+    </ChatModalContext.Provider>
+    );
+}
 
 export default App;
 

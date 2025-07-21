@@ -23,6 +23,16 @@ import com.social_portfolio_db.demo.naveen.Mappers.UserProfileMapper;
 import com.social_portfolio_db.demo.naveen.Services.UserService;
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UserDetails;
+import com.social_portfolio_db.demo.naveen.Entity.FriendRequest;
+import com.social_portfolio_db.demo.naveen.Entity.Notification;
+import com.social_portfolio_db.demo.naveen.Jpa.FriendRequestRepository;
+import com.social_portfolio_db.demo.naveen.Jpa.NotificationRepository;
+import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class UserServiceImp implements UserService {
@@ -31,6 +41,11 @@ public class UserServiceImp implements UserService {
     private final SkillRepository skillRepo;
     @Autowired
     private ProjectsRepository projectsRepo;
+
+    @Autowired
+    private FriendRequestRepository friendRequestRepo;
+    @Autowired
+    private NotificationRepository notificationRepo;
 
     public UserServiceImp(UserJpa userRepo, SkillRepository skillRepo) {
         this.userRepo = userRepo;
@@ -156,6 +171,197 @@ public List<Users> getFollowing(Long userId) {
     }
     return new java.util.ArrayList<>(followingSet);
 
+}
+
+public ResponseEntity<?> sendFriendRequest(Long id, UserDetails userDetails) {
+    try {
+        Users fromUser = userRepo.findByEmail(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("Current user not found"));
+        Users toUser = userRepo.findById(id).orElseThrow(() -> new RuntimeException("Target user not found"));
+        if (Objects.equals(fromUser.getId(), toUser.getId())) {
+            return ResponseEntity.badRequest().body("You cannot send a friend request to yourself");
+        }
+        if (friendRequestRepo.existsByFromUserAndToUserAndStatus(fromUser, toUser, "PENDING")) {
+            return ResponseEntity.badRequest().body("Friend request already sent");
+        }
+        FriendRequest req = FriendRequest.builder().fromUser(fromUser).toUser(toUser).status("PENDING")
+            .createdAt(LocalDateTime.now())
+            .build();
+        friendRequestRepo.save(req);
+        // Add notification for friend request
+        Notification notification = Notification.builder()
+            .user(toUser)
+            .message(fromUser.getUsername() + " sent you a friend request.")
+            .type("FRIEND_REQUEST")
+            .createdAt(LocalDateTime.now())
+            .read(false)
+            .build();
+        notificationRepo.save(notification);
+        return ResponseEntity.ok("Friend request sent");
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error sending friend request: " + e.getMessage());
+    }
+}
+
+public ResponseEntity<?> acceptFriendRequest(Long id, UserDetails userDetails) {
+    try {
+        Users toUser = userRepo.findByEmail(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("Current user not found"));
+        Users fromUser = userRepo.findById(id).orElseThrow(() -> new RuntimeException("Request sender not found"));
+        FriendRequest req = friendRequestRepo.findByFromUserAndToUser(fromUser, toUser).orElseThrow(() -> new RuntimeException("No request found"));
+        req.setStatus("ACCEPTED");
+        friendRequestRepo.save(req);
+        return ResponseEntity.ok("Friend request accepted");
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error accepting friend request: " + e.getMessage());
+    }
+}
+
+public ResponseEntity<?> declineFriendRequest(Long id, UserDetails userDetails) {
+    try {
+        Users toUser = userRepo.findByEmail(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("Current user not found"));
+        Users fromUser = userRepo.findById(id).orElseThrow(() -> new RuntimeException("Request sender not found"));
+        FriendRequest req = friendRequestRepo.findByFromUserAndToUser(fromUser, toUser).orElseThrow(() -> new RuntimeException("No request found"));
+        req.setStatus("DECLINED");
+        friendRequestRepo.save(req);
+        return ResponseEntity.ok("Friend request declined");
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error declining friend request: " + e.getMessage());
+    }
+}
+
+public ResponseEntity<?> getFriendRequestStatus(Long id, UserDetails userDetails) {
+    try {
+        Users currentUser = userRepo.findByEmail(userDetails.getUsername()).orElseThrow(() -> new RuntimeException("Current user not found"));
+        Users otherUser = userRepo.findById(id).orElseThrow(() -> new RuntimeException("Other user not found"));
+        return ResponseEntity.ok(friendRequestRepo.findByFromUserAndToUser(currentUser, otherUser).orElse(null));
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error checking friend request status: " + e.getMessage());
+    }
+}
+
+public ResponseEntity<?> cancelFriendRequest(Long id, UserDetails userDetails) {
+    try {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body("You must be logged in to cancel a friend request.");
+        }
+        Users currentUser = userRepo.findByEmail(userDetails.getUsername())
+            .orElseThrow(() -> new RuntimeException("Current user not found"));
+        Users targetUser = userRepo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Target user not found"));
+        Optional<FriendRequest> request = friendRequestRepo.findByFromUserAndToUser(currentUser, targetUser);
+        if (request.isPresent() && "PENDING".equals(request.get().getStatus())) {
+            friendRequestRepo.delete(request.get());
+            return ResponseEntity.ok("Friend request cancelled successfully");
+        } else if (request.isPresent()) {
+            return ResponseEntity.badRequest().body("Friend request is not pending (status: " + request.get().getStatus() + ")");
+        } else {
+            return ResponseEntity.badRequest().body("No pending friend request found to cancel");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error cancelling friend request: " + e.getMessage());
+    }
+}
+
+public ResponseEntity<?> followUser(Long id, Long followerId) {
+    try {
+        Users user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        Users follower = userRepo.findById(followerId).orElseThrow(() -> new RuntimeException("Follower not found"));
+        Optional<FriendRequest> existingRequest = friendRequestRepo.findByFromUserAndToUser(follower, user);
+        if (existingRequest.isPresent()) {
+            FriendRequest request = existingRequest.get();
+            if ("ACCEPTED".equals(request.getStatus())) {
+                return ResponseEntity.ok("Already following");
+            } else if ("PENDING".equals(request.getStatus())) {
+                request.setStatus("ACCEPTED");
+                friendRequestRepo.save(request);
+            }
+        } else {
+            FriendRequest request = FriendRequest.builder()
+                .fromUser(follower)
+                .toUser(user)
+                .status("ACCEPTED")
+                .createdAt(LocalDateTime.now())
+                .build();
+            friendRequestRepo.save(request);
+        }
+        if (!Objects.equals(follower.getId(), user.getId())) {
+            Notification notif = Notification.builder()
+                .user(user)
+                .message(follower.getUsername() + " started following you.")
+                .type("FOLLOW")
+                .createdAt(LocalDateTime.now())
+                .read(false)
+                .build();
+            notificationRepo.save(notif);
+        }
+        return ResponseEntity.ok("Followed user");
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error following user: " + e.getMessage());
+    }
+}
+
+public ResponseEntity<?> unfollowUser(Long id, UserDetails userDetails) {
+    try {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body("You must be logged in to unfollow a user.");
+        }
+        Users currentUser = userRepo.findByEmail(userDetails.getUsername())
+            .orElseThrow(() -> new RuntimeException("Current user not found"));
+        Users targetUser = userRepo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Target user not found"));
+        Optional<FriendRequest> request = friendRequestRepo.findByFromUserAndToUser(currentUser, targetUser);
+        if (request.isPresent() && "ACCEPTED".equals(request.get().getStatus())) {
+            friendRequestRepo.delete(request.get());
+            return ResponseEntity.ok("Unfollowed user successfully");
+        } else if (request.isPresent()) {
+            return ResponseEntity.badRequest().body("You have not followed this user yet (status: " + request.get().getStatus() + ")");
+        } else {
+            return ResponseEntity.badRequest().body("You are not following this user (no follow relationship found)");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error unfollowing user: " + e.getMessage());
+    }
+}
+
+public ResponseEntity<?> removeFollower(Long id, UserDetails userDetails) {
+    try {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body("You must be logged in to remove a follower.");
+        }
+        Users currentUser = userRepo.findByEmail(userDetails.getUsername())
+            .orElseThrow(() -> new RuntimeException("Current user not found"));
+        Users followerUser = userRepo.findById(id)
+            .orElseThrow(() -> new RuntimeException("Follower user not found"));
+        Optional<FriendRequest> request = friendRequestRepo.findByFromUserAndToUser(followerUser, currentUser);
+        if (request.isPresent() && "ACCEPTED".equals(request.get().getStatus())) {
+            friendRequestRepo.delete(request.get());
+            return ResponseEntity.ok("Follower removed successfully");
+        } else if (request.isPresent()) {
+            return ResponseEntity.badRequest().body("This user is not following you yet (status: " + request.get().getStatus() + ")");
+        } else {
+            return ResponseEntity.badRequest().body("This user is not following you (no follow relationship found)");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body("Error removing follower: " + e.getMessage());
+    }
 }
 
 }

@@ -9,4 +9,5 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findBySenderAndReceiverOrderByTimestampAsc(Users sender, Users receiver);
     List<ChatMessage> findBySenderIdAndReceiverIdOrderByTimestampAsc(Long senderId, Long receiverId);
     List<ChatMessage> findBySenderIdOrReceiverIdOrderByTimestampAsc(Long senderId, Long receiverId);
+    List<ChatMessage> findBySenderIdAndReceiverIdOrSenderIdAndReceiverIdOrderByTimestampAsc(Long senderId1, Long receiverId1, Long senderId2, Long receiverId2);
 } 

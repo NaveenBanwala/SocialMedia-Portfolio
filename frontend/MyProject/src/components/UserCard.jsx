@@ -52,12 +52,23 @@ const UserCard = ({ user }) => {
         setProfileLiked(false);
       }
     };
-    // Fetch friend status
+    // Fetch friend status in both directions
     const fetchFriendStatus = async () => {
       if (!user.id || !currentUser || user.id === currentUser.id) return;
       try {
-        const res = await api.get(`/users/${user.id}/friend-request/status`);
-        setFriendStatus(res.data ? res.data.status : null);
+        // 1. Current user -> card user
+        const res1 = await api.get(`/users/${user.id}/friend-request/status`);
+        // 2. Card user -> current user
+        const res2 = await api.get(`/users/${currentUser.id}/friend-request/status`, { params: { otherUserId: user.id } });
+        const status1 = res1.data ? res1.data.status : null;
+        const status2 = res2.data ? res2.data.status : null;
+        if (status1 === 'ACCEPTED' || status2 === 'ACCEPTED') {
+          setFriendStatus('ACCEPTED');
+        } else if (status1 === 'PENDING' || status2 === 'PENDING') {
+          setFriendStatus('PENDING');
+        } else {
+          setFriendStatus(null);
+        }
       } catch (err) {
         setFriendStatus(null);
       }
@@ -150,10 +161,10 @@ const UserCard = ({ user }) => {
       <p className="text-gray-500">{user.email}</p>
       <div className="flex items-center gap-2 mt-2">
         <span className="text-xs text-gray-600 cursor-pointer" onClick={() => setShowFollowers(true)}>
-          Followers: <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">{followersCount}</span>
+          Followers: <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">{user.followersCount ?? 0}</span>
         </span>
         <span className="text-xs text-gray-600 cursor-pointer" onClick={() => setShowFollowing(true)}>
-          Following: <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold">{following.length}</span>
+          Following: <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold">{user.followingCount ?? 0}</span>
         </span>
         {/* Profile like button and count */}
         {currentUser && user.id !== currentUser.id && (

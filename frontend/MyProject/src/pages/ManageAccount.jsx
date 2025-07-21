@@ -18,17 +18,34 @@ const ManageAccount = () => {
     setLoading(true);
     setError('');
     setSuccess('');
+    if (!passwords.oldPassword || !passwords.newPassword) {
+      setError('Both fields are required.');
+      setLoading(false);
+      return;
+    }
+    if (passwords.oldPassword === passwords.newPassword) {
+      setError('New password must be different from old password.');
+      setLoading(false);
+      return;
+    }
     try {
-      // Replace with your actual API endpoint
       await api.post(`/auth/change-password`, {
-        email: user.email,
         oldPassword: passwords.oldPassword,
         newPassword: passwords.newPassword,
       });
       setSuccess('Password changed successfully!');
       setPasswords({ oldPassword: '', newPassword: '' });
     } catch (err) {
-      setError('Failed to change password.');
+      // Log error for debugging
+      console.log('Change password error:', err.response);
+      const errMsg = err.response?.data;
+      if (typeof errMsg === 'string') {
+        setError(errMsg);
+      } else if (errMsg && typeof errMsg === 'object' && errMsg.message) {
+        setError(errMsg.message);
+      } else {
+        setError('Failed to change password.');
+      }
     }
     setLoading(false);
   };

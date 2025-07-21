@@ -59,8 +59,8 @@ const Login = () => {
     };
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-yellow-100 shadow-2xl shadow-inner">
-            <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+        <div className="flex justify-center items-center min-h-screen">
+            <div className="translucent-bg w-full max-w-md">
                 <h2 className="text-2xl font-bold mb-6 text-center text-[#32a86d]">Login</h2>
                 
                 {error && (
@@ -75,7 +75,7 @@ const Login = () => {
                         name="email"
                         id="email"
                         placeholder="Email"
-                        className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d] mb-2"
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d] mb-2 bg-transparent"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
@@ -87,7 +87,7 @@ const Login = () => {
                         name="password"
                         id="password"
                         placeholder="Password"
-                        className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d] mb-2"
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d] mb-2 bg-transparent"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required

@@ -31,55 +31,11 @@ api.interceptors.response.use(
     }
 );
 
-// // ================= AUTH =================
-// export const login = (data) => api.post('/auth/login', data);
-// export const register = (data) => api.post('/auth/register', data);
-
-// // ================= USER =================
-// export const getUserProfile = (id) => api.get(`/users/${id}`);
-// export const updateUserProfile = (id, data) => api.put(`/${id}`, data);
-// export const uploadProfileImage = (id, file) => {
-//     const formData = new FormData();
-//     formData.append('file', file);
-//     return api.post(`/users/${id}/upload`, formData, {
-//         headers: { 'Content-Type': 'multipart/form-data' },
-//     });
-// };
-// export const searchUsers = (params) => api.get('/search', { params });
-
-// // ================= POST =================
-// export const createPost = (data) => api.post('/posts', data);
-// export const getMyPosts = () => api.get('/posts/me');
-// export const getAllPosts = () => api.get('/posts/all');
-// export const deleteOwnPost = (postId) => api.delete(`/posts/${postId}`);
-// export const getUserPosts = (userId) => api.get(`/posts/user/${userId}`);
-// // export const likePost = (postId) => api.post(`/posts/${postId}/like`);
-// // export const getPostLikes = (postId) => api.get(`/posts/${postId}/likes`);
-// export const sendFriendRequest = (userId) => api.post(`/users/${userId}/friend-request`);
-
-// // ================= PROJECT =================
-// export const uploadProject = (formData) => api.post('/projects/upload', formData, {
-//     headers: { 'Content-Type': 'multipart/form-data' },
-// });
-// export const getProjectsByUser = (userId) => api.get(`/projects/user/${userId}`);
-// export const getProject = (projectId) => api.get(`/projects/${projectId}`);
-// export const deleteOwnProject = (projectId) => api.delete(`/projects/${projectId}`);
-
-// // ================= LIKE =================
-// export const likeProject = (projectId, userId) => api.post(`/likes/project/${projectId}`, null, { params: { userId } });
-// export const likeProfile = (likedUserId, likedById) => api.post(`/likes/profile/${likedUserId}`, null, { params: { likedById } });
-// export const getProjectLikeCount = (projectId) => api.get(`/likes/project/${projectId}/count`);
-// export const getProfileLikeCount = (userId) => api.get(`/likes/profile/${userId}/count`);
-
-// // ================= ADMIN =================
-// export const getAllUsers = () => api.get('/admin/users');
-// export const deleteUser = (id) => api.delete(`/admin/users/${id}`);
-// export const getAllProjects = () => api.get('/admin/projects');
-// export const deleteProject = (id) => api.delete(`/admin/projects/${id}`);
-// export const deleteAnyPost = (postId) => api.delete(`/admin/posts/${postId}`);
-// export const getAdminData = () => api.get('/admin/data');
-
-// // ================= RESUME =================
-// export const downloadResume = (id) => api.get(`/users/${id}/resume`, { responseType: 'blob' });
+export const getVotingContestTop = () => api.get('/voting-contest/top');
+export const getVotingContestStatus = () => api.get('/voting-contest/status');
+export const applyVotingContest = (userId, email, imageUrl) =>
+    api.post('/voting-contest/apply', null, { params: { userId, email, imageUrl } });
+export const voteForContestant = (voterId, applicationId) => api.post('/voting-contest/vote', null, { params: { voterId, applicationId } });
+export const getVotingTrend = () => api.get('/voting-contest/applications');
 
 export default api;

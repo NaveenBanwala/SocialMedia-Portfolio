@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard-images")
@@ -26,34 +27,45 @@ public class DashboardImageAdminController {
     private final String UPLOAD_DIR = "uploads/dashboard/";
 
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadDashboardImage(@RequestParam("file") MultipartFile file) throws IOException {
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("No file uploaded");
+    public ResponseEntity<?> uploadDashboardImages(@RequestParam("files") List<MultipartFile> files) throws IOException {
+        if (files == null || files.isEmpty()) {
+            return ResponseEntity.badRequest().body("No files uploaded");
         }
-        // Delete old dashboard image if exists
-        List<DashboardImage> allImages = dashboardImageRepository.findAll();
-        for (DashboardImage img : allImages) {
-            // Delete file from disk
-            try {
-                Path filePath = Paths.get("uploads/dashboard/" + img.getUrl().substring(img.getUrl().lastIndexOf("/") + 1));
-                Files.deleteIfExists(filePath);
-            } catch (Exception e) {
-                // ignore file delete error
-            }
-            dashboardImageRepository.delete(img);
+        if (files.size() > 4) {
+            return ResponseEntity.badRequest().body("You can upload a maximum of 4 images");
         }
         File dir = new File(UPLOAD_DIR);
         if (!dir.exists()) dir.mkdirs();
-        String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        Path filepath = Paths.get(UPLOAD_DIR, filename);
-        Files.write(filepath, file.getBytes());
-        String url = "/images/dashboard/" + filename;
-        DashboardImage img = DashboardImage.builder()
-                .url(url)
-                .uploadedAt(LocalDateTime.now())
-                .build();
-        dashboardImageRepository.save(img);
-        return ResponseEntity.ok(img);
+        List<DashboardImage> savedImages = new java.util.ArrayList<>();
+        for (MultipartFile file : files) {
+            String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            Path filepath = Paths.get(UPLOAD_DIR, filename);
+            Files.write(filepath, file.getBytes());
+            String url = "/images/dashboard/" + filename;
+            DashboardImage img = DashboardImage.builder()
+                    .url(url)
+                    .uploadedAt(LocalDateTime.now())
+                    .position("center")
+                    .build();
+            dashboardImageRepository.save(img);
+            savedImages.add(img);
+        }
+        // Keep only the latest 4 images in DB
+        List<DashboardImage> allImages = dashboardImageRepository.findAll();
+        if (allImages.size() > 4) {
+            allImages.sort((a, b) -> b.getUploadedAt().compareTo(a.getUploadedAt())); // newest first
+            List<DashboardImage> toDelete = allImages.subList(4, allImages.size());
+            for (DashboardImage img : toDelete) {
+                try {
+                    Path filePath = Paths.get("uploads/dashboard/" + img.getUrl().substring(img.getUrl().lastIndexOf("/") + 1));
+                    Files.deleteIfExists(filePath);
+                } catch (Exception e) {
+                    // ignore file delete error
+                }
+                dashboardImageRepository.delete(img);
+            }
+        }
+        return ResponseEntity.ok(savedImages);
     }
 
     @DeleteMapping("/{id}")
@@ -71,18 +83,26 @@ public class DashboardImageAdminController {
         return ResponseEntity.ok("Deleted");
     }
 
-    // Get the current dashboard image (only one)
+    @PutMapping("/{id}/position")
+    public ResponseEntity<?> updateImagePosition(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        DashboardImage img = dashboardImageRepository.findById(id).orElse(null);
+        if (img == null) return ResponseEntity.notFound().build();
+        String position = body.getOrDefault("position", "center");
+        img.setPosition(position);
+        dashboardImageRepository.save(img);
+        return ResponseEntity.ok(img);
+    }
+
+    // Get all dashboard images (up to 4)
     @GetMapping
     @PreAuthorize("permitAll()")
-    public ResponseEntity<DashboardImage> getCurrentDashboardImage() {
+    public ResponseEntity<List<DashboardImage>> getDashboardImages() {
         List<DashboardImage> allImages = dashboardImageRepository.findAll();
         if (allImages.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-        // Return the latest uploaded image
-        DashboardImage latest = allImages.stream()
-            .max((a, b) -> a.getUploadedAt().compareTo(b.getUploadedAt()))
-            .orElse(null);
-        return ResponseEntity.ok(latest);
+        // Return up to 4 latest images
+        allImages.sort((a, b) -> b.getUploadedAt().compareTo(a.getUploadedAt()));
+        return ResponseEntity.ok(allImages.subList(0, Math.min(4, allImages.size())));
     }
 } 

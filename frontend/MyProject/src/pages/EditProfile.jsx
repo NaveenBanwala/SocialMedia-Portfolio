@@ -26,6 +26,7 @@ const EditProfile = () => {
   const [skillsArr, setSkillsArr] = useState([]); // [{ name, level }]
   const [showSkillInput, setShowSkillInput] = useState(false);
   const [newSkill, setNewSkill] = useState('');
+  const [profilePic, setProfilePic] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -54,6 +55,9 @@ const EditProfile = () => {
   };
   const handleResumeChange = (e) => {
     setResume(e.target.files[0]);
+  };
+  const handleProfilePicChange = (e) => {
+    setProfilePic(e.target.files[0]);
   };
   const handleDownloadResume = async () => {
     if (!user?.resumeUrl) return;
@@ -105,12 +109,19 @@ const EditProfile = () => {
         skills: skillsArr.map(s => ({ name: s.name, level: s.level })),
         // Optionally: skillLevels: skillsArr.map(s => ({ name: s.name, level: s.level })),
       });
+      if (profilePic) {
+        const formData = new FormData();
+        formData.append('file', profilePic);
+        await api.post(`/users/${user.id}/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
       if (resume) {
         const formData = new FormData();
-          formData.append('file', resume);
-          await api.post(`/users/${user.id}/resume/upload`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+        formData.append('file', resume);
+        await api.post(`/users/${user.id}/resume/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
       }
       setSuccess('Profile updated successfully!');
       setTimeout(() => navigate('/profile/me'), 1000);
@@ -129,6 +140,16 @@ const EditProfile = () => {
     <div className="p-8 max-w-2xl mx-auto bg-white shadow rounded mt-10">
       <h2 className="text-2xl font-bold text-[#32a86d] mb-4">Edit Your Profile</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Profile Picture Section */}
+        <div>
+          <label className="block mb-1 font-medium">Change Profile Picture</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleProfilePicChange}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d]"
+          />
+        </div>
         <div>
           <label className="block mb-1 font-medium">Username</label>
           <input

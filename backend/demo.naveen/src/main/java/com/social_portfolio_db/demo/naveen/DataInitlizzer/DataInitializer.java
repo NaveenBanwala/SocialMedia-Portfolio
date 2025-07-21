@@ -38,9 +38,7 @@ public class DataInitializer {
                 admin.setRoles(Set.of(adminRole));
 
                 userRepo.save(admin);
-                System.out.println("✅ Default Admin user created successfully.");
             } else {
-                System.out.println("ℹ️ Admin already exists.");
             }
         };
     }

@@ -1,8 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useAuth } from '../Api/AuthContext.jsx';
 import api from '../Api/api.jsx';
 import SideBar from './SideBar.jsx';
+import { ChatModalContext } from '../contexts/ChatModalContext.jsx';
 
 function Navbar() {
   const { isAuthenticated, isAdmin, user } = useAuth();
@@ -13,6 +14,9 @@ function Navbar() {
     const saved = localStorage.getItem('darkMode');
     return saved ? JSON.parse(saved) : false;
   });
+  // New state to trigger chat modal from navbar
+  const [openChatFromNavbar, setOpenChatFromNavbar] = useState(false);
+  const { setShowChat, setModalView } = useContext(ChatModalContext);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -132,12 +136,12 @@ function Navbar() {
         isAdmin ? (
           <button className="bg-white border-2 border-[#32a86d] rounded px-4 py-2 flex items-center gap-2" onClick={() => navigate("/messages")}>Messages</button>
         ) : (
-          <button className="bg-blue-500 text-white rounded px-4 py-2 flex items-center gap-2" onClick={() => navigate("/admin-response")}>Admin Response</button>
+          <button className="bg-blue-500 text-white rounded px-4 py-2 flex items-center gap-2" onClick={() => setOpenChatFromNavbar(true)}>Messages</button>
         )
       )}
 
     {/*Setting Option */}
-    <SideBar/>
+    <SideBar openChatFromNavbar={openChatFromNavbar} onChatModalOpened={() => setOpenChatFromNavbar(false)} />
 
       {/* Right: Login/Register or Logout */}
       <div className="flex gap-4 items-center">

@@ -79,8 +79,8 @@ function Support() {
   };
 
   return (
-    <div className="flex min-h-screen max-w-full bg-gray-100 justify-center items-start py-10">
-      <div className="bg-white shadow rounded p-8 w-full max-w-2xl">
+    <div className="flex min-h-screen max-w-full justify-center items-start py-10">
+      <div className="translucent-bg shadow rounded p-8 w-full max-w-2xl">
         <h1 className="text-3xl font-bold text-[#32a86d] mb-2">Support</h1>
         <p className="mb-6 text-gray-600">Need help or have a question? Fill out the form below and our team will get back to you as soon as possible. You can also check the FAQ section for quick answers.</p>
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -93,7 +93,7 @@ function Support() {
               onChange={handleChange}
               required
               rows={4}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d]"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#32a86d] bg-transparent"
             />
           </div>
           <button

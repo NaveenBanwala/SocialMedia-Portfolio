@@ -36,104 +36,7 @@ public class PostController {
     private final PostRepository postRepo;
     private final UserJpa userRepo;
 
-    // Health check endpoint
-  
-
-    // Get all posts (public feed)
-    @GetMapping("/all")
-    public ResponseEntity<List<Map<String, Object>>> getAllPosts() {
-        List<Post> posts = postRepo.findAllByOrderByCreatedAtDesc();
-        List<Map<String, Object>> safePosts = posts.stream().map(post -> {
-            Map<String, Object> postMap = new HashMap<>();
-            postMap.put("id", post.getId());
-            postMap.put("content", post.getContent());
-            postMap.put("createdAt", post.getCreatedAt());
-            if (post.getUser() != null) {
-                Map<String, Object> userMap = new HashMap<>();
-                userMap.put("id", post.getUser().getId());
-                userMap.put("username", post.getUser().getUsername());
-                postMap.put("user", userMap);
-            }
-            return postMap;
-        }).toList();
-        return ResponseEntity.ok(safePosts);
-    }
-
-    // Test endpoint to check if posts table is accessible
-    // @GetMapping("/test")
-    // public ResponseEntity<?> testPostsTable() {
-    //     try {
-    //         long count = postRepo.count();
-    //         List<Post> allPosts = postRepo.findAll();
-    //         log.info("Posts table is accessible. Total posts: {}", count);
-    //         return ResponseEntity.ok(Map.of(
-    //             "message", "Posts table is accessible",
-    //             "totalPosts", count,
-    //             "posts", allPosts.stream().map(post -> Map.of(
-    //                 "id", post.getId(),
-    //                 "content", post.getContent(),
-    //                 "userId", post.getUser().getId(),
-    //                 "username", post.getUser().getUsername(),
-    //                 "createdAt", post.getCreatedAt()
-    //             )).collect(java.util.stream.Collectors.toList()),
-    //             "status", "OK"
-    //         ));
-    //     } catch (Exception e) {
-    //         log.error("Error accessing posts table: ", e);
-    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-    //             .body(Map.of(
-    //                 "message", "Error accessing posts table",
-    //                 "error", e.getMessage(),
-    //                 "status", "ERROR"
-    //             ));
-    //     }
-    // }
-
-    
-
-
-    // Test user posts endpoint
-    @GetMapping("/test-user/{userId}")
-    public ResponseEntity<?> testUserPosts(@PathVariable Long userId) {
-        try {
-            log.info("Testing posts for user ID: {}", userId);
-            
-            // First check if user exists
-            if (!userRepo.existsById(userId)) {
-                log.warn("User with ID {} not found", userId);
-                return ResponseEntity.ok(Map.of(
-                    "message", "User not found",
-                    "userId", userId,
-                    "postCount", 0,
-                    "posts", List.of(),
-                    "status", "USER_NOT_FOUND"
-                ));
-            }
-            
-            List<Post> posts = postRepo.findByUserIdOrderByCreatedAtDesc(userId);
-            log.info("Found {} posts for user ID: {}", posts.size(), userId);
-            
-            return ResponseEntity.ok(Map.of(
-                "message", "User posts test successful",
-                "userId", userId,
-                "postCount", posts.size(),
-                "posts", posts.stream().map(post -> Map.of(
-                    "id", post.getId(),
-                    "content", post.getContent(),
-                    "createdAt", post.getCreatedAt()
-                )).collect(java.util.stream.Collectors.toList()),
-                "status", "OK"
-            ));
-        } catch (Exception e) {
-            log.error("Error testing posts for user ID {}: ", userId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                    "message", "Error testing user posts",
-                    "error", e.getMessage(),
-                    "status", "ERROR"
-                ));
-        }
-    }
+    // Removed test endpoints and all debug logging
 
     // Create a new post
     @PostMapping
@@ -316,6 +219,71 @@ public class PostController {
         }
     }
 
+    @GetMapping
+    public ResponseEntity<?> getAllPosts() {
+        List<Post> posts = postRepo.findAllByOrderByCreatedAtDesc();
+        List<Map<String, Object>> safePosts = posts.stream()
+            .map(post -> {
+                Map<String, Object> postMap = new HashMap<>();
+                postMap.put("id", post.getId());
+                postMap.put("content", post.getContent());
+                postMap.put("createdAt", post.getCreatedAt());
+                if (post.getUser() != null) {
+                    Map<String, Object> userMap = new HashMap<>();
+                    userMap.put("id", post.getUser().getId());
+                    userMap.put("username", post.getUser().getUsername());
+                    userMap.put("email", post.getUser().getEmail());
+                    userMap.put("bio", post.getUser().getBio());
+                    userMap.put("location", post.getUser().getLocation());
+                    userMap.put("profilePicUrl", post.getUser().getProfilePicUrl());
+                    userMap.put("resumeUrl", post.getUser().getResumeUrl());
+                    userMap.put("createdAt", post.getUser().getCreatedAt());
+                    if (post.getUser().getSkills() != null) {
+                        List<String> skillNames = post.getUser().getSkills().stream()
+                            .map(skill -> skill.getSkillName())
+                            .collect(java.util.stream.Collectors.toList());
+                        userMap.put("skills", skillNames);
+                    }
+                    postMap.put("user", userMap);
+                }
+                return postMap;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(safePosts);
+    }
+    
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllPostsGlobal() {
+        List<Post> posts = postRepo.findAllByOrderByCreatedAtDesc();
+        List<Map<String, Object>> safePosts = posts.stream()
+            .map(post -> {
+                Map<String, Object> postMap = new HashMap<>();
+                postMap.put("id", post.getId());
+                postMap.put("content", post.getContent());
+                postMap.put("createdAt", post.getCreatedAt());
+                if (post.getUser() != null) {
+                    Map<String, Object> userMap = new HashMap<>();
+                    userMap.put("id", post.getUser().getId());
+                    userMap.put("username", post.getUser().getUsername());
+                    userMap.put("email", post.getUser().getEmail());
+                    userMap.put("bio", post.getUser().getBio());
+                    userMap.put("location", post.getUser().getLocation());
+                    userMap.put("profilePicUrl", post.getUser().getProfilePicUrl());
+                    userMap.put("resumeUrl", post.getUser().getResumeUrl());
+                    userMap.put("createdAt", post.getUser().getCreatedAt());
+                    if (post.getUser().getSkills() != null) {
+                        List<String> skillNames = post.getUser().getSkills().stream()
+                            .map(skill -> skill.getSkillName())
+                            .collect(java.util.stream.Collectors.toList());
+                        userMap.put("skills", skillNames);
+                    }
+                    postMap.put("user", userMap);
+                }
+                return postMap;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(safePosts);
+    }
     
 }
 

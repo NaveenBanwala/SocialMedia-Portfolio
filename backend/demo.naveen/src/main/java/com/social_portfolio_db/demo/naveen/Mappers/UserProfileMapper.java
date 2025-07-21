@@ -14,6 +14,7 @@ public class UserProfileMapper {
         UserProfileDTO dto = new UserProfileDTO();
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
         dto.setBio(user.getBio());
         dto.setLocation(user.getLocation());
         // Always set a valid profilePicUrl

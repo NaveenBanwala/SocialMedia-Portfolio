@@ -1,7 +1,6 @@
 package com.social_portfolio_db.demo.naveen.Controllers;
 
 import com.social_portfolio_db.demo.naveen.Entity.ChatMessage;
-import com.social_portfolio_db.demo.naveen.Entity.Users;
 import com.social_portfolio_db.demo.naveen.Jpa.ChatMessageRepository;
 import com.social_portfolio_db.demo.naveen.Jpa.UserJpa;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,10 +18,11 @@ public class ChatController {
     // Get chat history between two users
     @GetMapping("/history/{userId1}/{userId2}")
     public List<ChatMessageDTO> getChatHistory(@PathVariable Long userId1, @PathVariable Long userId2) {
-        return chatMessageRepository.findBySenderIdOrReceiverIdOrderByTimestampAsc(userId1, userId2)
+        return chatMessageRepository
+            .findBySenderIdAndReceiverIdOrSenderIdAndReceiverIdOrderByTimestampAsc(
+                userId1, userId2, userId2, userId1
+            )
             .stream()
-            .filter(msg -> (msg.getSender().getId() == userId1 && msg.getReceiver().getId() == userId2) ||
-                           (msg.getSender().getId() == userId2 && msg.getReceiver().getId() == userId1))
             .map(ChatMessageDTO::new)
             .toList();
     }

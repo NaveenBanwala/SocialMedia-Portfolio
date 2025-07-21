@@ -8,13 +8,14 @@ import java.util.List;
 @Data
 public class UserProfileDTO {
     private Long id;
-    private String username;           
+    private String username;
+    private String email;
     private String bio;
     private String location;
     private String profilePicUrl;
-    private String resumeUrl;        
+    private String resumeUrl;
 
-    private List<SkillDTO> skills; 
+    private List<SkillDTO> skills;
 
     private List<ProjectDTO> projects;
     private List<String> roles;

@@ -59,14 +59,8 @@ public class AuthController {
 
             return ResponseEntity.ok(response);
         } catch (AuthenticationException e) {
-            // Log the actual exception for debugging
-            System.err.println("Authentication failed for email: " + request.getEmail());
-            System.err.println("Exception: " + e.getMessage());
             return ResponseEntity.status(401).body(null);
         } catch (Exception e) {
-            // Log any other exceptions
-            System.err.println("Unexpected error during login: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }
     }

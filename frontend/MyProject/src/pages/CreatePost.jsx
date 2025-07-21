@@ -42,9 +42,9 @@ const CreatePost = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
+    <div className="min-h-screen py-8">
       <div className="max-w-2xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="translucent-bg rounded-lg shadow-md p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-[#32a86d]">Create New Post</h1>

@@ -75,6 +75,22 @@ public class VotingContestController {
         }
     }
 
+    @GetMapping("/voting-contest/get-all-contests")
+    public Map<String,Object> findAllContests(){
+        Map<String , Object> contests = votingContestService.getAllContest();
+
+        
+        return new HashMap<>(contests);
+    }
+
+    @DeleteMapping("/voting-contest/remove-contest/{id}")
+    public ResponseEntity<?> removeContest(@PathVariable Long id){
+        ResponseEntity<?> res = votingContestService.removeContestById(id);
+
+        return ResponseEntity.ok(res);
+
+    }
+
     @GetMapping("/top")
     public Map<String, Object> getTopContestants() {
         List<VotingApplication> contestants = votingContestService.getTopContestants(3);

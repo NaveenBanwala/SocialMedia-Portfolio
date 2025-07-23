@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import api from '../Api/api.jsx';
 import { getVotingContestTop } from '../Api/api';
+import Footer from "../components/Footer.jsx";
 
 const DashboardPage = () => {
   // State to hold posts
@@ -224,16 +225,13 @@ const DashboardPage = () => {
                 )}
               </div>
               {/* Caption/label below image */}
-              <div className="mt-3 w-full text-center font-semibold text-lg text-gray-700">
-                Mission : Friend Request
-              </div>
             </div>
             {/* Right: Text and Apply button */}
             <div className="flex flex-col items-center justify-center p-8 md:w-1/2">
               <div className="mb-6 text-lg text-center text-gray-700 font-medium">Ready to stand out? <br/> <span className='text-[#32a86d] font-bold'>Apply now and let your friends vote for you!</span></div>
               <Link to="/voting-contest/apply">
                 <button
-                  className="bg-gradient-to-r from-[#32a86d] to-[#43e97b] text-white px-6 py-2 rounded-full font-bold text-base shadow flex items-center gap-2 transition-transform duration-200 hover:scale-105 hover:shadow-xl focus:outline-none"
+                  className="bg-gradient-to-r from-[#32a86d] to-[#43e97b] text-white px-6 py-2 rounded-full font-bold text-base shadow flex items-center gap-2 transition-transform duration-200 hover:scale-105 hover:shadow-xl focus:outline-none nounderline"
                 >
                   <svg xmlns='http://www.w3.org/2000/svg' className='h-5 w-5' fill='none' viewBox='0 0 24 24' stroke='currentColor'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M12 4v16m8-8H4' /></svg>
                   Apply
@@ -243,8 +241,8 @@ const DashboardPage = () => {
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6 mb-6 shadow-[0_8px_48px_0_rgba(50,168,109,0.45)]">
-          <h2 className="text-3xl font-bold mb-2 text-[#32a86d]">Welcome back, {user?.username || 'User'}!</h2>
-          <p className="text-gray-600">Manage your profile, projects, and stay connected with the community.</p>
+          <h2 className="text-3xl font-bold mb-2 text-[#32a86d]">Welcome back, {user?.username || 'User'}</h2>
+          <p className="text-gray-600 font-bold">Manage your profile, projects, and stay connected with the community.</p>
         </div>
         {/* Posts Feed Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8 shadow-[0_8px_48px_0_rgba(50,168,109,0.45)]">
@@ -306,37 +304,10 @@ const DashboardPage = () => {
               ))
             )}
           </div>
-        </div>
 
-        {/* Quick Stats */}
-        {user && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-              <div className="text-3xl font-bold text-[#32a86d] mb-2">
-                {myPosts.length}
-              </div>
-              <div className="text-gray-600">Posts</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-              <div className="text-3xl font-bold text-[#32a86d] mb-2">
-                {user.skills?.length || 0}
-              </div>
-              <div className="text-gray-600">Skills</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-              <div className="text-3xl font-bold text-[#32a86d] mb-2">
-                {myPosts.length}
-              </div>
-              <div className="text-gray-600">My Posts</div>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-              <div className="text-3xl font-bold text-[#32a86d] mb-2">
-                {user.resumeUrl ? '✓' : '✗'}
-              </div>
-              <div className="text-gray-600">Resume</div>
-            </div>
-          </div>
-        )}
+
+          <Footer/>
+        </div>
       </div>
     </div>
   );

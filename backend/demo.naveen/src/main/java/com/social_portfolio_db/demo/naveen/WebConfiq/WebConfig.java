@@ -41,8 +41,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:uploads/");
         }
 
-    @Bean
-    public CorsFilter corsFilter() {
+        @Bean
+        public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.addAllowedOriginPattern("http://localhost:5173");
@@ -52,6 +52,6 @@ public class WebConfig implements WebMvcConfigurer {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
-    }
+        }
 }
 

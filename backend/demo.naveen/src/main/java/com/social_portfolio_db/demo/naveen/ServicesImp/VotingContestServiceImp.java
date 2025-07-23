@@ -5,6 +5,7 @@ import com.social_portfolio_db.demo.naveen.Jpa.*;
 import com.social_portfolio_db.demo.naveen.Services.VotingContestService;
 import com.social_portfolio_db.demo.naveen.Dtos.VoteDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,6 +25,22 @@ public class VotingContestServiceImp implements VotingContestService {
     private VoteRepository voteRepo;
     @Autowired
     private UserJpa userRepo;
+
+    // @Override
+    // public  removeContest(Long contestId) {
+    //     contestRepo.deleteById(contestId);
+    // }
+
+    @Override
+    public VotingContest updateContest(VotingContest contest) {
+        if (contest == null || contest.getId() == null) {
+            throw new IllegalArgumentException("Contest or Contest ID must not be null");
+        }
+        if (!contestRepo.existsById(contest.getId())) {
+            throw new RuntimeException("Contest not found");
+        }
+        return contestRepo.save(contest);
+    }
 
     @Override
     public VotingApplication applyForContest(Long userId, String email, String imageUrl) {
@@ -135,18 +152,43 @@ public class VotingContestServiceImp implements VotingContestService {
         return allApplications.subList(0, topN);
     }
 
-    @Override
-    public VotingContest updateContest(VotingContest contest){
+    // @Override
+    // public VotingContest updateContest(VotingContest contest){
 
         // Check contest exist or not
         // if(contestRepo.findById(contest.getId())){
 
         // }
-    }
+    // }
 
     @Override
+    public ResponseEntity<?> removeContestById(Long id){
+        contestRepo.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Contest removed successfully"));
+    }
+    @Override
+    public Map<String, Object> getAllContest() {
+        List<VotingContest> contests = contestRepo.findAll();
+        if (contests != null && !contests.isEmpty()) {
+            Map<String, Object> currContest = new HashMap<>();
+            for (VotingContest contest : contests) {
+                if (contest.isActive()) {
+                    currContest.put("id", contest.getId());
+                    currContest.put("title", contest.getTitle());
+                    currContest.put("description", contest.getDescription());
+                    currContest.put("startTime", contest.getStartTime());
+                    currContest.put("endTime", contest.getEndTime());
+                }
+            }
+            return new HashMap<>(currContest);
+        } else {
+            return Map.of("message", "No Constest found");
+        }
+    }
+
+    // @Override
+    @Override
     public VotingContest getActiveContest() {
-        // Find the active contest (isActive = true, and now between start and end)
         List<VotingContest> contests = contestRepo.findAll();
         LocalDateTime now = LocalDateTime.now();
         for (VotingContest contest : contests) {
@@ -163,7 +205,6 @@ public class VotingContestServiceImp implements VotingContestService {
             .findFirst()
             .orElse(null);
     }
-
     @Override
     public boolean isVotingOpen() {
         VotingContest contest = getActiveContest();

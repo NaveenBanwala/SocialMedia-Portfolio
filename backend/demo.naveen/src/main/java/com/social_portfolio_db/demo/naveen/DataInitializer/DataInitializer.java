@@ -1,4 +1,4 @@
-package com.social_portfolio_db.demo.naveen.DataInitlizzer;
+package com.social_portfolio_db.demo.naveen.DataInitializer;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;

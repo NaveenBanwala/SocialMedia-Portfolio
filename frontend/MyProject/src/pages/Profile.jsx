@@ -5,6 +5,7 @@ import { useAuth } from '../Api/AuthContext.jsx';
 import PostCard from '../components/PostCard';
 import { useState as useReactState } from 'react';
 import { ChatModalContext } from '../contexts/ChatModalContext.jsx';
+import ProjectCard from '../components/ProjectCard';
 
 const Profile = () => {
   const { id } = useParams(); // 'me' or user id
@@ -744,39 +745,13 @@ const Profile = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {user && user.projects && Array.isArray(user.projects) && user.projects.length > 0 ? (
               user.projects.map((project) => (
-                <div key={project.id || project.title} className="shadow relative">
-                  {isOwnProfile && (
-                    <button
-                      onClick={() => deleteProject(project.id)}
-                      disabled={loading}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 disabled:opacity-50"
-                      title="Delete project"
-                    >
-                      ×
-                    </button>
-                  )}
-                  <img
-                    src={getImageUrl(project.imageUrl)}
-                  alt={project.title}
-                  className="w-full h-40 object-cover rounded mb-2"
-                    onError={(e) => {
-                      e.target.src = '/default-project.png';
-                    }}
+                <ProjectCard
+                  key={project.id || project.title}
+                  project={project}
+                  onDelete={async (projectId) => {
+                    await deleteProject(projectId);
+                  }}
                 />
-                <h3 className="text-lg font-bold text-[#32a86d]">{project.title}</h3>
-                <p className="text-sm text-gray-600 mb-2">{project.description}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-pink-600 font-semibold">
-                    ❤️ {projectLikes[project.id]?.count || 0}
-                  </span>
-                </div>
-                <button
-                  onClick={() => navigate(`/project/${project.id}`)}
-                  className="text-sm bg-[#32a86d] text-white px-3 py-1 rounded hover:bg-[#2c915d]"
-                >
-                  View Project
-                </button>
-              </div>
               ))
             ) : (
               <div className="col-span-2 text-center py-8 text-gray-500">
@@ -825,7 +800,9 @@ const Profile = () => {
           ) : userPosts && userPosts.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {userPosts.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} onDelete={(deletedId) => {
+                  fetchUserPosts(user.id);
+                }} />
               ))}
             </div>
           ) : (

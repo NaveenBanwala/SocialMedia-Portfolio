@@ -20,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectDTO;
 import com.social_portfolio_db.demo.naveen.Dtos.ProjectUploadRequest;
@@ -32,6 +33,7 @@ import com.social_portfolio_db.demo.naveen.ServicesImp.LikeService;
 @RestController
 @RequestMapping("/api/projects")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
 public class ProjectsController {
 
     private final ProjectService projectsService;
@@ -190,6 +192,27 @@ public class ProjectsController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error getting like count: " + e.getMessage());
         }
+    }
+
+    // Add this endpoint to return all projects
+    @GetMapping
+    public ResponseEntity<List<ProjectDTO>> getAllProjects() {
+        List<Projects> projects = projectsRepository.findAll();
+        List<ProjectDTO> dtos = projects.stream().map(project -> {
+            int likeCount = project.getLikes() != null ? project.getLikes().size() : 0;
+            String username = project.getUser() != null ? project.getUser().getUsername() : null;
+            Long userId = project.getUser() != null ? project.getUser().getId() : null;
+            return new ProjectDTO(
+                project.getId(),
+                project.getTitle(),
+                project.getDescription(),
+                project.getImageUrl(),
+                likeCount,
+                username,
+                userId
+            );
+        }).toList();
+        return ResponseEntity.ok(dtos);
     }
 
     private Long getCurrentUserId(UserDetails userDetails) {

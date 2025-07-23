@@ -154,23 +154,30 @@ const SidebarOverlay = ({ openChatFromNavbar, onChatModalOpened }) => {
         {isOpen ? 'Close Menu' : 'Open Menu'}
         </button>
         {isOpen && (
-          <div className="fixed top-0 left-0 w-64 h-full translucent-bg shadow-2xl z-40 flex flex-col p-6 gap-4 overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-6 text-center text-white">Social Portfolio</h2>
+          <div className="fixed top-0 left-0 w-64 h-full  shadow-2xl z-40 flex flex-col p-6 gap-4 overflow-y-auto bg-green-200">
+            <h2 className="text-2xl font-bold mb-6 text-center text-black">Social Portfolio</h2>
+
+
             {/* Admin-only Create Contest link at the top */}
             {user && (user.role === "ADMIN" || user.roles?.includes("ROLE_ADMIN") || user.roles?.some?.(r => r === "ROLE_ADMIN" || r.name === "ROLE_ADMIN")) && (
-              <Link
-                to="/admin/create-contest"
-                className="w-full py-2 px-4 rounded font-semibold bg-white text-[#32a86d] hover:bg-blue-100 text-blue-700 font-semibold mb-2"
+              <button
+              
+                className="w-full py-2 px-4 rounded font-semibold bg-white text-green-700 hover:bg-blue-100 text-blue-700 font-semibold mb-2 no-underline font-semibold text-center" onClick={()=>
+                  navigate('/admin/create-contest')
+                }
               >
-                Create Contest
-              </Link>
+                Create-Contest
+              </button>
             )}
+
+
             {/* Show only Messages for admin, Admin Response for regular users */}
             {user && (user.roles?.includes('ROLE_ADMIN') || user.roles?.some?.(r => r === 'ROLE_ADMIN' || r.name === 'ROLE_ADMIN')) ? (
               <button
                 className="w-full py-2 px-4 rounded font-semibold bg-white text-[#32a86d] hover:bg-[#278a57] hover:text-white transition mb-2"
                 title="Open Chat System"
-                onClick={() => { setModalView('chat'); setShowChat(true); }}
+                onClick={() => { setModalView('chat');
+                  setShowChat(true); }}
               >
                 Messages
               </button>

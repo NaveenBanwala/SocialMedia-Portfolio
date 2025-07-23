@@ -3,7 +3,7 @@ import { useAuth } from '../Api/AuthContext.jsx';
 import api from '../Api/api.jsx';
 import { useNavigate } from 'react-router-dom';
 
-const PostCard = ({ post }) => {
+const PostCard = ({ post, onDelete }) => {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
@@ -13,6 +13,7 @@ const PostCard = ({ post }) => {
   const [friendRequestStatus, setFriendRequestStatus] = useState(null);
   const [showLikeCount, setShowLikeCount] = useState(true);
   const [imgError, setImgError] = useState(false); // Track image load error
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Helper function to construct full image URL
   const getImageUrl = (imagePath) => {
@@ -136,7 +137,39 @@ const PostCard = ({ post }) => {
   };
 
   return (
-    <div className="border-2 border-[#32a86d] rounded-xl p-4 shadow bg-white">
+    <div className="border-2 border-[#32a86d] rounded-xl p-4 shadow bg-white relative">
+      {/* 3-dots menu */}
+      {currentUser && post.user?.id === currentUser.id && (
+        <>
+          <button
+            className="absolute top-2 right-2 text-gray-800 hover:text-black text-3xl font-bold focus:outline-none"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="More options"
+          >
+            &#x22EE;
+          </button>
+          {menuOpen && (
+            <div className="absolute top-10 right-2 bg-white border rounded shadow z-10">
+              <button
+                className="block px-4 py-2 text-red-600 hover:bg-red-50 w-full text-left"
+                onClick={async () => {
+                  setMenuOpen(false);
+                  if (window.confirm('Are you sure you want to delete this post?')) {
+                    try {
+                      await api.delete(`/posts/${post.id}`);
+                      if (onDelete) onDelete(post.id);
+                    } catch (e) {
+                      alert('Failed to delete post.');
+                    }
+                  }
+                }}
+              >
+                Delete Post
+              </button>
+            </div>
+          )}
+        </>
+      )}
       {/* User info header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">

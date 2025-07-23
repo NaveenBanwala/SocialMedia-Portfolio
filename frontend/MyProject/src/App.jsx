@@ -153,7 +153,7 @@ function App() {
     <ChatModalContext.Provider value={{ showChat, setShowChat, selectedUser, setSelectedUser }}>
         <AuthProvider>
         <div className="min-h-screen bg-white shadow-[0_8px_48px_0_rgba(50,168,109,0.45)]">
-          <AppRoutes />
+        <AppRoutes />
         </div>
         </AuthProvider>
     </ChatModalContext.Provider>

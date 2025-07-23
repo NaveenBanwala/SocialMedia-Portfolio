@@ -12,7 +12,6 @@ function ContestUpdate(){
         <div className="contest-update-outer h-screen w-screen flex justify-center items-center"> 
             <div  className="inner-div-property h-60 w-60 ">
                 <div className="voting-container">
-
                 </div>
                 <div></div>
             </div>

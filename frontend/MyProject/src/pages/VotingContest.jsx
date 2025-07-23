@@ -122,13 +122,7 @@ function VotingContest() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-[#E8FFD7] w-full py-10">
-      {/* Title/banner spanning both columns */}
-      {/* <div className="w-full max-w-4xl mb-8">
-        <div className="bg-gradient-to-r from-[#32a86d] to-[#6ee7b7] rounded-lg shadow p-6 flex flex-col items-center">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2 text-center tracking-wide">Voting Contest</h1>
-          <h2 className="text-lg md:text-xl text-white text-center">Participate, vote, and see the results!</h2>
-        </div>
-      </div> */}
+
         <div className="w-full max-w-4xl translucent-bg rounded-lg shadow-md flex flex-col md:flex-row gap-0 md:gap-0 overflow-hidden">
         {/* Left: Dashboard image (small, carousel if multiple) */}
         <div className="w-full md:w-2/5 flex flex-col items-center justify-center bg-gray-50 p-6 relative">

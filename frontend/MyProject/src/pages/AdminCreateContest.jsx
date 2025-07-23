@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import api from "../Api/api.jsx";
 import { useAuth } from "../Api/AuthContext";
 
@@ -13,10 +13,34 @@ export default function AdminCreateContest() {
   const [loading, setLoading] = useState(false);
   const [endTimeError, setEndTimeError] = useState("");
   const [startTimeError, setStartTimeError] = useState("");
+  const [listContest , setListContest] = useState(false);
+  const [currentContest, setCurrentContest] = useState([]);
 
-  // Only allow admins to use this page (route protection is in App.jsx)
-  if (!user || !(user.role === "ADMIN" || user.roles?.includes("ROLE_ADMIN") || user.roles?.some?.(r => r === "ROLE_ADMIN" || r.name === "ROLE_ADMIN"))) {
-    return null;
+  //Remove Contest
+  const RemoveContest = async ()=> {
+    try {
+    await api.delete(`/voting-contest/remove-contest/${currentContest.id}`);
+    setMessage("Contest removed successfully!");
+  
+    }catch(err){
+      alert("Error in removing contest:" + err.message);
+      setMessage("Failed to remove contest.");
+    }
+  }
+
+  //Fetch existing contests
+  // useEffect(()=>{
+  //   fetchExistingContests();
+  // })
+  const fetchExistingContests = async()=>{
+    try {
+      const res = await api.get("/voting-contest/get-all-contests");
+      setCurrentContest(res.data);
+      setListContest(true);
+    } catch (err) {
+      console.error("Error fetching contests:", err);
+      setMessage("Failed to fetch existing contests.");
+    }
   }
 
   // Helper to validate datetime-local string
@@ -82,8 +106,13 @@ export default function AdminCreateContest() {
     }
   };
 
+  // Only allow admins to use this page (route protection is in App.jsx)
+  if (!user || !(user.role === "ADMIN" || user.roles?.includes("ROLE_ADMIN") || user.roles?.some?.(r => r === "ROLE_ADMIN" || r.name === "ROLE_ADMIN"))) {
+    return null;
+  }
+
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded shadow">
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded shadow mt-8">
       {/* Tabs for contest types */}
       <div className="flex mb-6 border-b">
         <button
@@ -128,7 +157,7 @@ export default function AdminCreateContest() {
             />
           </div>
           <div>
-            <label className="block font-medium">Start Time</label>
+            <label className="block font-medium">Enter time of event</label>
             <input
               type="datetime-local"
               className={`w-full border p-2 rounded ${startTimeError ? 'border-red-500' : ''}`}
@@ -144,7 +173,7 @@ export default function AdminCreateContest() {
             {startTimeError && <div className="text-red-600 text-sm mt-1">{startTimeError}</div>}
           </div>
           <div>
-            <label className="block font-medium">End Time</label>
+            <label className="block font-medium">Enter data and time</label>
             <input
               type="datetime-local"
               className={`w-full border p-2 rounded ${endTimeError ? 'border-red-500' : ''}`}
@@ -166,7 +195,17 @@ export default function AdminCreateContest() {
             {loading ? "Creating..." : "Create Contest"}
           </button>
         </form>
+
+        
       )}
+      
+
+      <div className="mt-6 text-center">
+        <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={() => setListContest(prev => !prev)} onChange={fetchExistingContests} >
+          Show all Existing-Contest
+        </button>
+      </div>
+    
 
       {/* Quiz Contest Tab (UI only for now) */}
       {activeTab === "quiz" && (
@@ -180,8 +219,28 @@ export default function AdminCreateContest() {
       {activeTab === "other" && (
         <div className="text-gray-400 text-center py-8">(Empty)</div>
       )}
-
+      
       {message && <div className="mt-4 text-center text-lg">{message}</div>}
+
+      {listContest && (
+        <div className="mt-8 p-2 bg-gray-50 rounded shadow">
+          <h3 className="font-bold text-center">List of Existing Contest</h3>
+          <ul className="mt-2 space-y-2">
+
+          
+            {/* console.log(currentContest); */}
+            {Array.isArray(currentContest) && currentContest.map((contest)=>(
+              <li key={contest.id} className="p-4 bg-white rounded shadow hover:shadow-lg transition-shadow">
+                <h4 className="text-lg font-semibold">{contest.title}</h4>
+                <p className="text-gray-600">{contest.description}</p>
+                <p className="text-sm text-gray-500">Start: {new Date(contest.startTime).toLocaleString()}</p>
+                <p className="text-sm text-gray-500">End: {new Date(contest.endTime).toLocaleString()}</p>
+              </li>
+            ))}
+          <button className="h-5 w-5 bg-red-200" onClick={RemoveContest}>End of this Contest</button>
+          </ul>
+        </div>
+      )}
     </div>
   );
 } 
